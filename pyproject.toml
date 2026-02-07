@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ucw"
+version = "0.1.0"
+description = "Universal Cognitive Wallet — Cross-platform AI cognitive capture via MCP"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "Dicoangelo", email = "dicoangelo@users.noreply.github.com" },
+]
+keywords = ["mcp", "cognitive", "ai", "capture", "claude"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "sentence-transformers>=2.2.0",
+    "numpy>=1.24.0",
+    "click>=8.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+]
+
+[project.scripts]
+ucw = "ucw.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Dicoangelo/ucw"
+Repository = "https://github.com/Dicoangelo/ucw"
+Issues = "https://github.com/Dicoangelo/ucw/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ucw"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
