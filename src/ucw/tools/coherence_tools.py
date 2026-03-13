@@ -247,13 +247,28 @@ async def _coherence_search(args: Dict) -> Dict:
         )
 
     try:
-        from ucw.server.embeddings import build_embed_text, cosine_similarity, embed_single
+        from ucw.server.embeddings import (
+            build_embed_text,
+            cosine_similarity,
+            embed_single,
+        )
     except ImportError as exc:
         return tool_result_content(
-            [text_content(f"Embeddings not available: {exc}")], is_error=True
+            [text_content(
+                f"Embeddings not available: {exc}\n\n"
+                "Install with: pip install 'ucw[embeddings]'"
+            )], is_error=True,
         )
 
-    query_emb = embed_single(query)
+    try:
+        query_emb = embed_single(query)
+    except Exception as exc:
+        return tool_result_content(
+            [text_content(
+                f"Embedding model not available: {exc}\n\n"
+                "Install with: pip install 'ucw[embeddings]'"
+            )], is_error=True,
+        )
 
     conn = _db._conn
     if not conn:
