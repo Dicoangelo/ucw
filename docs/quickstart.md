@@ -8,9 +8,13 @@ Get UCW running in 5 minutes.
 pip install ucw
 ```
 
-This installs UCW and its dependencies (sentence-transformers, numpy, click).
+This installs UCW with minimal dependencies (just `click`). All 8 MCP tools work immediately.
 
-**Note:** The first time UCW embeds an event, it downloads the SBERT model (~90MB). This happens in the background and doesn't block the MCP handshake.
+For semantic search (`coherence_search`), install with embeddings:
+
+```bash
+pip install "ucw[embeddings]"   # adds sentence-transformers + numpy (~90MB model)
+```
 
 ## 2. Initialize
 

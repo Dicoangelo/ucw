@@ -11,12 +11,18 @@ UCW is an MCP server that sits between you and Claude, capturing every message w
 ## Quickstart
 
 ```bash
-pip install ucw
-ucw init
-ucw mcp-config  # prints the JSON to add to Claude
+pip install ucw          # lightweight — only click dependency
+ucw init                 # creates ~/.ucw/
+ucw mcp-config           # prints JSON to add to Claude
 ```
 
 Add the output to your Claude settings, restart Claude, and every conversation is captured.
+
+For semantic search (`coherence_search`), install with embeddings:
+
+```bash
+pip install "ucw[embeddings]"   # adds sentence-transformers + numpy
+```
 
 ## How It Works
 
@@ -114,12 +120,13 @@ Every captured event is enriched with UCW semantic layers:
 git clone https://github.com/Dicoangelo/ucw.git
 cd ucw
 pip install -e ".[dev]"
-pytest
+pytest               # 133 tests
+ruff check .         # 0 lint errors
 ```
 
 ## Roadmap
 
-- **v0.1** — MCP server + 7 tools + SQLite + SBERT (this release)
+- **v0.1** — MCP server + 8 tools + SQLite (this release)
 - **v0.2** — Cross-platform capture adapters (ChatGPT, Cursor, Grok)
 - **v0.3** — Coherence engine with cross-platform alignment detection
 - **v0.4** — PostgreSQL backend with pgvector similarity search
