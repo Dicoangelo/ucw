@@ -10,8 +10,8 @@ Tools:
 import json
 from typing import Any, Dict, List
 
-from ucw.server.protocol import tool_result_content, text_content
 from ucw.server.logger import get_logger
+from ucw.server.protocol import text_content, tool_result_content
 
 log = get_logger("tools.ucw")
 
@@ -27,7 +27,10 @@ def set_db(db):
 TOOLS: List[Dict[str, Any]] = [
     {
         "name": "ucw_capture_stats",
-        "description": "Get current UCW capture session statistics: events, turns, topics, gut signals, and total capture metrics",
+        "description": (
+            "Get current UCW capture session statistics: "
+            "events, turns, topics, gut signals, and total capture metrics"
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {},
@@ -41,11 +44,17 @@ TOOLS: List[Dict[str, Any]] = [
             "properties": {
                 "platform": {
                     "type": "string",
-                    "description": "Filter by platform (e.g., 'claude-desktop', 'chatgpt'). Omit for all platforms.",
+                    "description": (
+                        "Filter by platform (e.g., 'claude-desktop', "
+                        "'chatgpt'). Omit for all platforms."
+                    ),
                 },
                 "since_ns": {
                     "type": "number",
-                    "description": "Only return events after this nanosecond timestamp. Omit for all events.",
+                    "description": (
+                        "Only return events after this nanosecond "
+                        "timestamp. Omit for all events."
+                    ),
                 },
                 "limit": {
                     "type": "number",
@@ -57,7 +66,11 @@ TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "detect_emergence",
-        "description": "Scan recent cognitive events for emergence signals: high coherence potential, concept clusters, and meta-cognitive patterns",
+        "description": (
+            "Scan recent cognitive events for emergence signals: "
+            "high coherence potential, concept clusters, "
+            "and meta-cognitive patterns"
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -262,7 +275,10 @@ async def _detect_emergence(args: Dict) -> Dict:
     if breakthrough_signals:
         output += f"## Breakthrough Signals ({len(breakthrough_signals)})\n"
         for s in breakthrough_signals[:5]:
-            output += f"- Event {s['event_id']}: topic={s['topic']} coherence={s.get('coherence', 0):.2f}\n"
+            output += (
+                f"- Event {s['event_id']}: topic={s['topic']} "
+                f"coherence={s.get('coherence', 0):.2f}\n"
+            )
         output += "\n"
 
     if meta_cognitive:
@@ -274,7 +290,10 @@ async def _detect_emergence(args: Dict) -> Dict:
     if high_coherence:
         output += f"## High Coherence Events ({len(high_coherence)})\n"
         for h in high_coherence[:5]:
-            output += f"- Event {h['event_id']}: coherence={h['coherence']:.3f} topic={h['topic']}\n"
+            output += (
+                f"- Event {h['event_id']}: "
+                f"coherence={h['coherence']:.3f} topic={h['topic']}\n"
+            )
         output += "\n"
 
     if concept_clusters:
@@ -284,9 +303,15 @@ async def _detect_emergence(args: Dict) -> Dict:
         output += "\n"
 
     if emergence_score < 0.1:
-        output += "\n*No significant emergence signals detected. Continue working — patterns emerge over time.*\n"
+        output += (
+            "\n*No significant emergence signals detected. "
+            "Continue working — patterns emerge over time.*\n"
+        )
     elif emergence_score > 0.5:
-        output += "\n*Strong emergence signals detected. Consider capturing this moment as a coherence event.*\n"
+        output += (
+            "\n*Strong emergence signals detected. "
+            "Consider capturing this moment as a coherence event.*\n"
+        )
 
     return tool_result_content([text_content(output)])
 

@@ -1,6 +1,7 @@
 """Tests for coherence_tools module (coherence_status, moments, scan, cross-platform)."""
 
 import pytest
+
 from ucw.db.sqlite import CaptureDB
 from ucw.server.capture import CaptureEvent
 from ucw.tools import coherence_tools

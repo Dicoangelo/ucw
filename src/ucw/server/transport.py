@@ -6,11 +6,11 @@ NEVER pollutes stdout with logs.
 Every byte captured before processing.
 """
 
-import sys
-import json
 import asyncio
+import json
+import sys
 import time
-from typing import Optional, Tuple, Dict, Any, Callable, Awaitable
+from typing import Any, Awaitable, Callable, Dict, Optional, Tuple
 
 from ucw.server.logger import get_logger
 

@@ -1,13 +1,14 @@
 """Tests for protocol extras (ProtocolError, resources builders)."""
 
 import pytest
+
 from ucw.server.protocol import (
-    ProtocolError,
-    resources_list_result,
-    resource_read_result,
-    validate_message,
-    PARSE_ERROR,
     INVALID_REQUEST,
+    PARSE_ERROR,
+    ProtocolError,
+    resource_read_result,
+    resources_list_result,
+    validate_message,
 )
 
 

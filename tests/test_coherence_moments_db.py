@@ -1,6 +1,7 @@
 """Tests for coherence_moments DB methods (insert, query, cross-platform)."""
 
 import pytest
+
 from ucw.db.sqlite import CaptureDB
 from ucw.server.capture import CaptureEvent
 

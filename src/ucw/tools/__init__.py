@@ -6,8 +6,7 @@ Modules:
   coherence_tools  — 4 cross-platform coherence query tools
 """
 
-from ucw.tools import ucw_tools
-from ucw.tools import coherence_tools
+from ucw.tools import coherence_tools, ucw_tools
 
 ALL_TOOLS = ucw_tools.TOOLS + coherence_tools.TOOLS
 
@@ -23,5 +22,5 @@ async def handle_tool(name: str, args: dict) -> dict:
     handler = _DISPATCH.get(name)
     if handler:
         return await handler(name, args)
-    from ucw.server.protocol import tool_result_content, text_content
+    from ucw.server.protocol import text_content, tool_result_content
     return tool_result_content([text_content(f"Unknown tool: {name}")], is_error=True)

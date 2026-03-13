@@ -11,21 +11,21 @@ Routes:
   ping             -> pong
 """
 
-from typing import Any, Callable, Awaitable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from ucw.config import Config
 from ucw.server.logger import get_logger
 from ucw.server.protocol import (
-    initialize_result,
-    tools_list_result,
-    tool_result_content,
-    text_content,
-    resources_list_result,
-    resource_read_result,
-    ProtocolError,
-    METHOD_NOT_FOUND,
-    INVALID_PARAMS,
     INTERNAL_ERROR,
+    INVALID_PARAMS,
+    METHOD_NOT_FOUND,
+    ProtocolError,
+    initialize_result,
+    resource_read_result,
+    resources_list_result,
+    text_content,
+    tool_result_content,
+    tools_list_result,
 )
 
 log = get_logger("router")

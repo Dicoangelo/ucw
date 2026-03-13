@@ -46,6 +46,13 @@ Issues = "https://github.com/Dicoangelo/ucw/issues"
 [tool.hatch.build.targets.wheel]
 packages = ["src/ucw"]
 
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

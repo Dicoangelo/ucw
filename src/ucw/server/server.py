@@ -24,21 +24,20 @@ import signal
 from typing import Optional
 
 from ucw.config import Config
+from ucw.db.sqlite import CaptureDB
+from ucw.server.capture import CaptureEngine
+from ucw.server.embeddings import EmbeddingPipeline
 from ucw.server.logger import get_logger
-from ucw.server.transport import RawStdioTransport
 from ucw.server.protocol import (
-    validate_message,
-    make_response,
-    make_error,
-    ProtocolError,
-    PARSE_ERROR,
     INTERNAL_ERROR,
+    ProtocolError,
+    make_error,
+    make_response,
+    validate_message,
 )
 from ucw.server.router import Router
-from ucw.server.capture import CaptureEngine
-from ucw.db.sqlite import CaptureDB
-from ucw.server.ucw_bridge import extract_layers, coherence_signature
-from ucw.server.embeddings import EmbeddingPipeline
+from ucw.server.transport import RawStdioTransport
+from ucw.server.ucw_bridge import coherence_signature, extract_layers
 
 log = get_logger("server")
 
@@ -211,7 +210,7 @@ class RawMCPServer:
     def _inject_db(self):
         """Inject shared DB instance into tool modules that need it."""
         try:
-            from ucw.tools import ucw_tools, coherence_tools
+            from ucw.tools import coherence_tools, ucw_tools
             if hasattr(ucw_tools, 'set_db'):
                 ucw_tools.set_db(self._db)
             if hasattr(coherence_tools, 'set_db'):

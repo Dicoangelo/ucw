@@ -1,18 +1,17 @@
 """Tests for JSON-RPC 2.0 protocol module."""
 
 import pytest
+
 from ucw.server.protocol import (
-    validate_message,
-    make_response,
+    ProtocolError,
+    initialize_result,
     make_error,
     make_notification,
-    initialize_result,
-    tools_list_result,
-    tool_result_content,
+    make_response,
     text_content,
-    ProtocolError,
-    INVALID_REQUEST,
-    PARSE_ERROR,
+    tool_result_content,
+    tools_list_result,
+    validate_message,
 )
 
 
