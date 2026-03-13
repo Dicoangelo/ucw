@@ -126,9 +126,9 @@ ruff check .         # 0 lint errors
 
 ## Roadmap
 
-- **v0.1** — MCP server + 8 tools + SQLite (this release)
-- **v0.2** — Cross-platform capture adapters (ChatGPT, Cursor, Grok)
-- **v0.3** — Coherence engine with cross-platform alignment detection
+- **v0.1** — MCP server + 7 tools + SQLite + SBERT
+- **v0.2** — 8 tools, cross-platform coherence, lightweight install (this release)
+- **v0.3** — Cross-platform capture adapters (ChatGPT, Cursor, Grok)
 - **v0.4** — PostgreSQL backend with pgvector similarity search
 - **v1.0** — Full UCW with real-time coherence dashboard
 

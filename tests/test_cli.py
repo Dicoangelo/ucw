@@ -14,7 +14,8 @@ class TestCLI:
     def test_version(self, runner):
         result = runner.invoke(main, ["--version"])
         assert result.exit_code == 0
-        assert "0.1.0" in result.output
+        from ucw import __version__
+        assert __version__ in result.output
 
     def test_init(self, runner, tmp_ucw_dir):
         result = runner.invoke(main, ["init"])

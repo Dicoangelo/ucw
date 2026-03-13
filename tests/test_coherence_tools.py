@@ -130,6 +130,24 @@ class TestCoherenceTools:
         text = result["content"][0]["text"]
         assert "No cross-platform" in text
 
+    # -- coherence_search --
+
+    @pytest.mark.asyncio
+    async def test_search_no_db(self):
+        coherence_tools.set_db(None)
+        result = await coherence_tools.handle_tool(
+            "coherence_search", {"query": "test"},
+        )
+        assert result.get("isError") is True
+
+    @pytest.mark.asyncio
+    async def test_search_empty_query(self, db):
+        result = await coherence_tools.handle_tool(
+            "coherence_search", {"query": ""},
+        )
+        assert result.get("isError") is True
+        assert "required" in result["content"][0]["text"].lower()
+
     # -- unknown tool --
 
     @pytest.mark.asyncio

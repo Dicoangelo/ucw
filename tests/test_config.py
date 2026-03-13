@@ -8,7 +8,8 @@ class TestConfig:
     def test_defaults(self):
         from ucw.config import Config
         assert Config.SERVER_NAME == "ucw"
-        assert Config.SERVER_VERSION == "0.1.0"
+        from ucw import __version__
+        assert Config.SERVER_VERSION == __version__
         assert Config.PROTOCOL_VERSION == "2024-11-05"
         assert Config.PROTOCOL == "mcp"
 
