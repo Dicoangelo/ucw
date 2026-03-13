@@ -34,7 +34,7 @@ You ←→ Claude Desktop/Code
 
 UCW runs as an MCP server. Claude sends messages over STDIO, UCW captures and enriches every one, then passes them through. Zero latency impact on the handshake — database and embeddings initialize in the background.
 
-## MCP Tools (7)
+## MCP Tools (8)
 
 | Tool | Description |
 |------|-------------|
@@ -45,6 +45,7 @@ UCW runs as an MCP server. Claude sends messages over STDIO, UCW captures and en
 | `coherence_moments` | High-coherence events with emergence indicators |
 | `coherence_search` | Semantic similarity search across all events |
 | `coherence_scan` | Pattern scan with topic/intent/signal breakdown |
+| `cross_platform_coherence` | Find coherence signatures across 2+ platforms |
 
 ## CLI Commands
 
@@ -85,7 +86,7 @@ src/ucw/
 │   └── schema.sql         # PostgreSQL schema (v1.1)
 └── tools/
     ├── ucw_tools.py       # 3 capture tools
-    └── coherence_tools.py # 4 coherence tools
+    └── coherence_tools.py # 5 coherence tools
 ```
 
 ## The Three Layers
