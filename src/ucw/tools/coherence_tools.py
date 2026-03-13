@@ -14,8 +14,8 @@ import time
 from collections import Counter
 from typing import Any, Dict, List
 
-from ucw.server.protocol import tool_result_content, text_content
 from ucw.server.logger import get_logger
+from ucw.server.protocol import text_content, tool_result_content
 
 log = get_logger("tools.coherence")
 
@@ -162,7 +162,7 @@ async def _coherence_status(args: Dict) -> Dict:
     session_stats = await _db.get_session_stats()
 
     out = "# UCW Coherence Status\n\n"
-    out += f"| Metric | Value |\n|--------|-------|\n"
+    out += "| Metric | Value |\n|--------|-------|\n"
     out += f"| Total Events | {all_stats.get('total_events', 0):,} |\n"
     out += f"| Total Sessions | {all_stats.get('total_sessions', 0)} |\n"
     out += f"| Bytes Captured | {all_stats.get('total_bytes_captured', 0):,} |\n"
@@ -247,7 +247,7 @@ async def _coherence_search(args: Dict) -> Dict:
         )
 
     try:
-        from ucw.server.embeddings import embed_single, cosine_similarity, build_embed_text
+        from ucw.server.embeddings import build_embed_text, cosine_similarity, embed_single
     except ImportError as exc:
         return tool_result_content(
             [text_content(f"Embeddings not available: {exc}")], is_error=True
@@ -308,7 +308,11 @@ async def _coherence_search(args: Dict) -> Dict:
     out += f"**Results:** {len(results)}\n\n"
 
     for r in results:
-        out += f"**{r['similarity']:.0%}** [{r['platform']}] topic=`{r['topic']}` intent=`{r['intent']}` gut={r['gut']}\n"
+        out += (
+            f"**{r['similarity']:.0%}** [{r['platform']}] "
+            f"topic=`{r['topic']}` intent=`{r['intent']}` "
+            f"gut={r['gut']}\n"
+        )
         out += f"> {r['summary']}\n\n"
 
     return tool_result_content([text_content(out)])
@@ -395,7 +399,7 @@ async def _coherence_scan(args: Dict) -> Dict:
                 moments_saved += 1
 
     out = f"# Coherence Scan ({len(rows)} events)\n\n"
-    out += f"| Metric | Count |\n|--------|-------|\n"
+    out += "| Metric | Count |\n|--------|-------|\n"
     out += f"| High coherence (>0.7) | {high_coherence} |\n"
     out += f"| Breakthrough potential | {breakthroughs} |\n"
     out += f"| Meta-cognitive events | {meta_events} |\n"
@@ -452,7 +456,10 @@ async def _cross_platform_coherence(args: Dict) -> Dict:
             coherence_score=m["max_coherence"] or 0.0,
             event_ids=m["event_ids"],
             signature=m["signature"],
-            description=f"Cross-platform match: {m['platform_count']} platforms, {m['event_count']} events",
+            description=(
+                f"Cross-platform match: {m['platform_count']} platforms, "
+                f"{m['event_count']} events"
+            ),
         )
         if ok:
             saved += 1

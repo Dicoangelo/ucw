@@ -1,8 +1,8 @@
 """Shared fixtures for UCW tests."""
 
 import os
+
 import pytest
-from pathlib import Path
 
 
 @pytest.fixture

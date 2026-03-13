@@ -1,7 +1,7 @@
 """Tests for SQLite database — round-trip store/retrieve."""
 
 import pytest
-from pathlib import Path
+
 from ucw.db.sqlite import CaptureDB
 from ucw.server.capture import CaptureEvent
 
@@ -29,8 +29,14 @@ class TestCaptureDB:
             timestamp_ns=1000000000,
         )
         event.data_layer = {"content": "test", "tokens_est": 1}
-        event.light_layer = {"intent": "execute", "topic": "mcp_protocol", "concepts": [], "summary": "test"}
-        event.instinct_layer = {"coherence_potential": 0.35, "emergence_indicators": [], "gut_signal": "routine"}
+        event.light_layer = {
+            "intent": "execute", "topic": "mcp_protocol",
+            "concepts": [], "summary": "test",
+        }
+        event.instinct_layer = {
+            "coherence_potential": 0.35,
+            "emergence_indicators": [], "gut_signal": "routine",
+        }
         event.coherence_signature = "abc123"
 
         await db.store_event(event)
@@ -50,8 +56,14 @@ class TestCaptureDB:
                 timestamp_ns=i * 1000,
             )
             event.data_layer = {"content": f"content {i}"}
-            event.light_layer = {"intent": "explore", "topic": "general", "concepts": [], "summary": f"test {i}"}
-            event.instinct_layer = {"coherence_potential": 0.1, "emergence_indicators": [], "gut_signal": "routine"}
+            event.light_layer = {
+                "intent": "explore", "topic": "general",
+                "concepts": [], "summary": f"test {i}",
+            }
+            event.instinct_layer = {
+                "coherence_potential": 0.1,
+                "emergence_indicators": [], "gut_signal": "routine",
+            }
             await db.store_event(event)
 
         stats = await db.get_all_stats()
@@ -79,7 +91,10 @@ class TestCaptureDB:
         }
         event.instinct_layer = {
             "coherence_potential": 0.85,
-            "emergence_indicators": ["high_coherence_potential", "concept_cluster", "meta_cognitive"],
+            "emergence_indicators": [
+                "high_coherence_potential", "concept_cluster",
+                "meta_cognitive",
+            ],
             "gut_signal": "breakthrough_potential",
         }
         event.coherence_signature = "sig_abc123"
@@ -88,7 +103,8 @@ class TestCaptureDB:
 
         # Verify via raw SQL
         cur = db._conn.execute(
-            "SELECT light_topic, instinct_gut_signal, coherence_sig FROM cognitive_events WHERE event_id = ?",
+            "SELECT light_topic, instinct_gut_signal, coherence_sig "
+            "FROM cognitive_events WHERE event_id = ?",
             (event.event_id,),
         )
         row = cur.fetchone()

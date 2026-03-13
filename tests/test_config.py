@@ -1,7 +1,6 @@
 """Tests for UCW configuration."""
 
 import os
-import pytest
 from pathlib import Path
 
 

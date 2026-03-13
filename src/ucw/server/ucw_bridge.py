@@ -8,8 +8,7 @@ Every message gets tagged with:
 """
 
 import hashlib
-from typing import Dict, List, Tuple, Any
-
+from typing import Any, Dict, List, Tuple
 
 # Keywords by domain for topic extraction
 _DOMAIN_KEYWORDS = {

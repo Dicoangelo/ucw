@@ -3,7 +3,7 @@ File-only logger — NEVER writes to stdout (would corrupt MCP protocol)
 """
 
 import logging
-from pathlib import Path
+
 from ucw.config import Config
 
 

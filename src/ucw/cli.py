@@ -11,7 +11,6 @@ Commands:
 import asyncio
 import json
 import sys
-from pathlib import Path
 
 import click
 
@@ -55,7 +54,7 @@ def init():
 def server():
     """Start the UCW MCP server (stdio mode)."""
     from ucw.server.server import RawMCPServer
-    from ucw.tools import ucw_tools, coherence_tools
+    from ucw.tools import coherence_tools, ucw_tools
 
     async def _run():
         srv = RawMCPServer()

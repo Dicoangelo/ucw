@@ -1,6 +1,7 @@
 """Tests for UCW tools module (ucw_capture_stats, ucw_timeline, detect_emergence)."""
 
 import pytest
+
 from ucw.db.sqlite import CaptureDB
 from ucw.server.capture import CaptureEvent
 from ucw.tools import ucw_tools

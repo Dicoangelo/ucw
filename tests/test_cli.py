@@ -1,8 +1,8 @@
 """Tests for UCW CLI."""
 
-import json
 import pytest
 from click.testing import CliRunner
+
 from ucw.cli import main
 
 

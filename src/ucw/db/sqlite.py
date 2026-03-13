@@ -152,7 +152,10 @@ class CaptureDB:
                     light_intent, light_topic, light_concepts, light_summary,
                     instinct_coherence, instinct_indicators, instinct_gut_signal,
                     coherence_sig, platform, protocol
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                ) VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                )""",
                 (
                     event.event_id,
                     self._session_id,
@@ -301,7 +304,9 @@ class CaptureDB:
             log.error(f"Failed to query coherence moments: {exc}")
             return []
 
-    async def cross_platform_signatures(self, min_platforms: int = 2, limit: int = 20) -> List[Dict[str, Any]]:
+    async def cross_platform_signatures(
+        self, min_platforms: int = 2, limit: int = 20,
+    ) -> List[Dict[str, Any]]:
         """JOIN query: find coherence_sig hashes appearing on 2+ platforms."""
         if not self._conn:
             return []

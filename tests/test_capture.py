@@ -1,6 +1,7 @@
 """Tests for CaptureEngine."""
 
 import pytest
+
 from ucw.server.capture import CaptureEngine, CaptureEvent
 
 

@@ -1,12 +1,12 @@
 """Tests for UCW Bridge — semantic layer extraction."""
 
 from ucw.server.ucw_bridge import (
-    extract_layers,
-    coherence_signature,
-    _classify,
-    _extract_concepts,
     _DOMAIN_KEYWORDS,
     _INTENT_SIGNALS,
+    _classify,
+    _extract_concepts,
+    coherence_signature,
+    extract_layers,
 )
 
 

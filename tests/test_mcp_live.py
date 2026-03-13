@@ -48,7 +48,6 @@ async def test_handshake():
         # 3. Tools list
         resp = await send(proc, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
         tools = resp["result"]["tools"]
-        tool_names = [t["name"] for t in tools]
         assert len(tools) == 7, f"Expected 7 tools, got {len(tools)}"
         print(f"3/5 Tools registered ({len(tools)}):")
         for t in tools:
