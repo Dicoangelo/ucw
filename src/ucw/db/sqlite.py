@@ -84,6 +84,22 @@ CREATE TABLE IF NOT EXISTS capture_stats (
     stat_value      TEXT,
     updated_at      TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS coherence_moments (
+    moment_id       TEXT PRIMARY KEY,
+    detected_ns     INTEGER NOT NULL,
+    platform        TEXT NOT NULL,
+    cluster_id      TEXT,
+    coherence_score REAL NOT NULL,
+    event_ids       TEXT NOT NULL,
+    signature       TEXT,
+    description     TEXT,
+    created_at      TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_cm_detected ON coherence_moments(detected_ns);
+CREATE INDEX IF NOT EXISTS idx_cm_signature ON coherence_moments(signature);
+CREATE INDEX IF NOT EXISTS idx_cm_platform ON coherence_moments(platform);
 """
 
 
@@ -234,6 +250,86 @@ class CaptureDB:
             "gut_signals": signals,
             "current_session": self._session_id,
         }
+
+    async def insert_coherence_moment(
+        self, moment_id: str, platform: str, cluster_id: str,
+        coherence_score: float, event_ids: List[str],
+        signature: Optional[str] = None, description: Optional[str] = None,
+    ) -> bool:
+        """INSERT a detected coherence moment. Returns True on success."""
+        if not self._conn:
+            return False
+        try:
+            self._conn.execute(
+                """INSERT OR IGNORE INTO coherence_moments
+                   (moment_id, detected_ns, platform, cluster_id,
+                    coherence_score, event_ids, signature, description)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (moment_id, time.time_ns(), platform, cluster_id,
+                 coherence_score, json.dumps(event_ids),
+                 signature, description),
+            )
+            self._conn.commit()
+            return True
+        except Exception as exc:
+            log.error(f"Failed to insert coherence moment: {exc}")
+            return False
+
+    async def query_coherence_moments(
+        self, min_score: float = 0.7, limit: int = 20,
+    ) -> List[Dict[str, Any]]:
+        """Query stored coherence moments."""
+        if not self._conn:
+            return []
+        try:
+            cur = self._conn.execute(
+                """SELECT moment_id, detected_ns, platform, cluster_id,
+                          coherence_score, event_ids, signature, description
+                   FROM coherence_moments
+                   WHERE coherence_score >= ?
+                   ORDER BY coherence_score DESC LIMIT ?""",
+                (min_score, limit),
+            )
+            return [
+                {"moment_id": r[0], "detected_ns": r[1], "platform": r[2],
+                 "cluster_id": r[3], "coherence_score": r[4],
+                 "event_ids": json.loads(r[5]) if r[5] else [],
+                 "signature": r[6], "description": r[7]}
+                for r in cur.fetchall()
+            ]
+        except Exception as exc:
+            log.error(f"Failed to query coherence moments: {exc}")
+            return []
+
+    async def cross_platform_signatures(self, min_platforms: int = 2, limit: int = 20) -> List[Dict[str, Any]]:
+        """JOIN query: find coherence_sig hashes appearing on 2+ platforms."""
+        if not self._conn:
+            return []
+        try:
+            cur = self._conn.execute(
+                """SELECT coherence_sig,
+                          GROUP_CONCAT(DISTINCT platform) AS platforms,
+                          COUNT(DISTINCT platform) AS platform_count,
+                          COUNT(*) AS event_count,
+                          GROUP_CONCAT(DISTINCT event_id) AS event_ids,
+                          MAX(instinct_coherence) AS max_coherence
+                   FROM cognitive_events
+                   WHERE coherence_sig IS NOT NULL
+                   GROUP BY coherence_sig
+                   HAVING COUNT(DISTINCT platform) >= ?
+                   ORDER BY platform_count DESC, max_coherence DESC
+                   LIMIT ?""",
+                (min_platforms, limit),
+            )
+            return [
+                {"signature": r[0], "platforms": r[1].split(","),
+                 "platform_count": r[2], "event_count": r[3],
+                 "event_ids": r[4].split(",")[:20], "max_coherence": r[5]}
+                for r in cur.fetchall()
+            ]
+        except Exception as exc:
+            log.error(f"Failed cross-platform signature query: {exc}")
+            return []
 
     async def close(self):
         """Close database and finalize session."""

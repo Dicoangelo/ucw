@@ -8,7 +8,9 @@ Tools:
   coherence_scan       — Scan for emergence patterns
 """
 
+import hashlib
 import json
+import time
 from collections import Counter
 from typing import Any, Dict, List
 
@@ -87,6 +89,7 @@ TOOLS: List[Dict[str, Any]] = [
         "name": "coherence_scan",
         "description": (
             "Scan recent events for coherence patterns and emergence signals. "
+            "Breakthrough clusters are auto-saved to coherence_moments table. "
             "Returns a summary of detected patterns."
         ),
         "inputSchema": {
@@ -100,6 +103,28 @@ TOOLS: List[Dict[str, Any]] = [
             },
         },
     },
+    {
+        "name": "cross_platform_coherence",
+        "description": (
+            "Find coherence signatures appearing on 2+ platforms. "
+            "Detects when the same cognitive pattern emerges across different AI tools."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "min_platforms": {
+                    "type": "number",
+                    "description": "Minimum platforms for a match (default: 2)",
+                    "default": 2,
+                },
+                "limit": {
+                    "type": "number",
+                    "description": "Maximum results (default: 20)",
+                    "default": 20,
+                },
+            },
+        },
+    },
 ]
 
 
@@ -109,6 +134,7 @@ async def handle_tool(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
         "coherence_moments": _coherence_moments,
         "coherence_search": _coherence_search,
         "coherence_scan": _coherence_scan,
+        "cross_platform_coherence": _cross_platform_coherence,
     }
 
     handler = handlers.get(name)
@@ -303,8 +329,8 @@ async def _coherence_scan(args: Dict) -> Dict:
         )
 
     cur = conn.execute(
-        """SELECT light_topic, light_intent, instinct_gut_signal,
-                  instinct_coherence, instinct_indicators
+        """SELECT event_id, light_topic, light_intent, instinct_gut_signal,
+                  instinct_coherence, instinct_indicators, platform, coherence_sig
            FROM cognitive_events
            ORDER BY timestamp_ns DESC LIMIT ?""",
         (limit,),
@@ -320,9 +346,11 @@ async def _coherence_scan(args: Dict) -> Dict:
     high_coherence = 0
     breakthroughs = 0
     meta_events = 0
+    # US-013: collect breakthrough clusters for INSERT
+    breakthrough_events: List[Dict] = []
 
     for row in rows:
-        topic, intent, gut, coherence, indicators_json = row
+        event_id, topic, intent, gut, coherence, indicators_json, platform, sig = row
         indicators = _parse_json_list(indicators_json)
 
         if topic:
@@ -335,14 +363,43 @@ async def _coherence_scan(args: Dict) -> Dict:
             high_coherence += 1
         if gut == "breakthrough_potential":
             breakthroughs += 1
+            breakthrough_events.append({
+                "event_id": event_id, "coherence": coherence or 0.0,
+                "platform": platform or "unknown", "signature": sig,
+                "topic": topic,
+            })
         if "meta_cognitive" in indicators:
             meta_events += 1
+
+    # US-013: INSERT breakthrough clusters into coherence_moments
+    moments_saved = 0
+    if breakthrough_events:
+        # Group by topic to form clusters
+        clusters: Dict[str, List[Dict]] = {}
+        for evt in breakthrough_events:
+            key = evt["topic"] or "general"
+            clusters.setdefault(key, []).append(evt)
+        for cluster_topic, events in clusters.items():
+            avg_score = sum(e["coherence"] for e in events) / len(events)
+            eids = [e["event_id"] for e in events]
+            cluster_id = f"scan-{cluster_topic}-{int(time.time())}"
+            moment_id = hashlib.sha256(cluster_id.encode()).hexdigest()[:16]
+            sig = events[0].get("signature")
+            ok = await _db.insert_coherence_moment(
+                moment_id=moment_id, platform=events[0]["platform"],
+                cluster_id=cluster_id, coherence_score=avg_score,
+                event_ids=eids, signature=sig,
+                description=f"Breakthrough cluster: {cluster_topic} ({len(events)} events)",
+            )
+            if ok:
+                moments_saved += 1
 
     out = f"# Coherence Scan ({len(rows)} events)\n\n"
     out += f"| Metric | Count |\n|--------|-------|\n"
     out += f"| High coherence (>0.7) | {high_coherence} |\n"
     out += f"| Breakthrough potential | {breakthroughs} |\n"
-    out += f"| Meta-cognitive events | {meta_events} |\n\n"
+    out += f"| Meta-cognitive events | {meta_events} |\n"
+    out += f"| Moments saved | {moments_saved} |\n\n"
 
     out += "## Topic Distribution\n\n"
     for topic, count in topic_counts.most_common(10):
@@ -355,6 +412,53 @@ async def _coherence_scan(args: Dict) -> Dict:
     out += "\n## Gut Signals\n\n"
     for signal, count in signal_counts.most_common():
         out += f"- {signal}: {count}\n"
+
+    return tool_result_content([text_content(out)])
+
+
+async def _cross_platform_coherence(args: Dict) -> Dict:
+    """US-014: Find coherence signatures matching across 2+ platforms."""
+    if not _db:
+        return tool_result_content(
+            [text_content("Database not initialized.")], is_error=True
+        )
+
+    min_platforms = int(args.get("min_platforms", 2))
+    limit = int(args.get("limit", 20))
+
+    matches = await _db.cross_platform_signatures(min_platforms, limit)
+
+    if not matches:
+        return tool_result_content([text_content(
+            f"No cross-platform coherence found (min {min_platforms} platforms)."
+        )])
+
+    out = f"# Cross-Platform Coherence ({len(matches)} signatures)\n\n"
+    for m in matches:
+        out += f"**Signature:** `{m['signature'][:16]}...`\n"
+        out += f"  Platforms: {', '.join(m['platforms'])} ({m['platform_count']})\n"
+        out += f"  Events: {m['event_count']} | Max coherence: {m['max_coherence']:.3f}\n\n"
+
+    # Feed matches into coherence_moments as cross-platform events
+    saved = 0
+    for m in matches:
+        moment_id = hashlib.sha256(
+            f"xplat-{m['signature']}".encode()
+        ).hexdigest()[:16]
+        ok = await _db.insert_coherence_moment(
+            moment_id=moment_id,
+            platform=",".join(m["platforms"]),
+            cluster_id=f"xplat-{m['signature'][:12]}",
+            coherence_score=m["max_coherence"] or 0.0,
+            event_ids=m["event_ids"],
+            signature=m["signature"],
+            description=f"Cross-platform match: {m['platform_count']} platforms, {m['event_count']} events",
+        )
+        if ok:
+            saved += 1
+
+    if saved:
+        out += f"\n**{saved} cross-platform moments saved to coherence_moments.**\n"
 
     return tool_result_content([text_content(out)])
 
