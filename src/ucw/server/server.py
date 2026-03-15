@@ -41,13 +41,6 @@ from ucw.server.ucw_bridge import coherence_signature, extract_layers
 
 log = get_logger("server")
 
-# Protocol methods that should NEVER trigger embedding (fast-path)
-_PROTOCOL_METHODS = frozenset({
-    "initialize", "initialized", "notifications/initialized",
-    "tools/list", "resources/list", "ping",
-    "notifications/cancelled",
-})
-
 
 class UCWBridgeAdapter:
     """Adapts ucw_bridge module functions to the enrich(event) interface."""

@@ -71,13 +71,6 @@ def content_hash(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()
 
 
-def embed_texts(texts: List[str], batch_size: int = 64) -> List[List[float]]:
-    """Embed a batch of texts. Returns list of float vectors."""
-    model = _get_model()
-    embeddings = model.encode(texts, batch_size=batch_size, show_progress_bar=False)
-    return [e.tolist() for e in embeddings]
-
-
 def embed_single(text: str) -> List[float]:
     """Embed a single text. Returns float vector."""
     model = _get_model()
