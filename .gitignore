@@ -18,3 +18,4 @@ env/
 *.db
 *.log
 .DS_Store
+.claude/
