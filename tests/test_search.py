@@ -483,3 +483,247 @@ class TestUnifiedSearch:
 
         assert len(progress) == 5
         assert progress[-1] == (5, 5)
+
+
+# ── _escape_fts5 edge-case tests ─────────────────────────
+
+
+class TestEscapeFTS5:
+    def test_empty_string(self):
+        from ucw.search import _escape_fts5
+
+        assert _escape_fts5("") == ""
+        assert _escape_fts5("   ") == ""
+
+    def test_plain_terms_unchanged(self):
+        from ucw.search import _escape_fts5
+
+        assert _escape_fts5("hello world") == "hello world"
+
+    def test_special_chars_escaped(self):
+        from ucw.search import _escape_fts5
+
+        result = _escape_fts5("c++ python*")
+        # Each term with special chars should be wrapped in quotes
+        assert '"c++"' in result
+        assert '"python*"' in result
+
+    def test_double_quotes_doubled(self):
+        from ucw.search import _escape_fts5
+
+        result = _escape_fts5('"hello"')
+        # The double quotes inside should be doubled
+        assert '""hello""' in result
+
+    def test_mixed_special_and_plain(self):
+        from ucw.search import _escape_fts5
+
+        result = _escape_fts5("normal (special) plain")
+        assert "normal" in result
+        assert '"(special)"' in result
+        assert "plain" in result
+
+    def test_colon_escaped(self):
+        from ucw.search import _escape_fts5
+
+        result = _escape_fts5("key:value")
+        assert '"key:value"' in result
+
+    def test_hyphen_escaped(self):
+        from ucw.search import _escape_fts5
+
+        result = _escape_fts5("NOT -excluded")
+        assert '"-excluded"' in result
+
+
+# ── _build_filters edge-case tests ───────────────────────
+
+
+class TestBuildFilters:
+    def test_no_filters(self):
+        from ucw.search import _build_filters
+
+        clause, params = _build_filters()
+        assert clause == ""
+        assert params == []
+
+    def test_platform_only(self):
+        from ucw.search import _build_filters
+
+        clause, params = _build_filters(platform="cursor")
+        assert "ce.platform = ?" in clause
+        assert params == ["cursor"]
+
+    def test_after_only(self):
+        from ucw.search import _build_filters
+
+        clause, params = _build_filters(after=1000)
+        assert "ce.timestamp_ns >= ?" in clause
+        assert params == [1000]
+
+    def test_before_only(self):
+        from ucw.search import _build_filters
+
+        clause, params = _build_filters(before=9000)
+        assert "ce.timestamp_ns <= ?" in clause
+        assert params == [9000]
+
+    def test_all_filters_combined(self):
+        from ucw.search import _build_filters
+
+        clause, params = _build_filters(
+            platform="claude", after=100, before=900
+        )
+        assert "ce.platform = ?" in clause
+        assert "ce.timestamp_ns >= ?" in clause
+        assert "ce.timestamp_ns <= ?" in clause
+        assert params == ["claude", 100, 900]
+
+
+# ── Additional keyword search edge cases ─────────────────
+
+
+class TestKeywordSearchEdgeCases:
+    def test_like_search_with_platform_and_date(self, no_fts_db):
+        """LIKE fallback respects all filters together."""
+        from ucw.search import keyword_search
+
+        results = keyword_search(
+            no_fts_db, "MCP",
+            platform="claude-desktop",
+        )
+        assert len(results) >= 1
+        for r in results:
+            assert r["platform"] == "claude-desktop"
+
+    def test_like_search_no_match(self, no_fts_db):
+        from ucw.search import keyword_search
+
+        results = keyword_search(no_fts_db, "zzz_nonexistent_zzz")
+        assert results == []
+
+    def test_whitespace_only_query_fts5(self, search_db):
+        """FTS5 search with whitespace returns empty (escaped is empty)."""
+        from ucw.search import keyword_search
+
+        results = keyword_search(search_db, "   ")
+        assert results == []
+
+    def test_combined_platform_and_after(self, search_db):
+        from ucw.search import keyword_search
+
+        results = keyword_search(
+            search_db, "Python",
+            platform="claude-desktop",
+            after=4000000000,
+        )
+        for r in results:
+            assert r["platform"] == "claude-desktop"
+            assert r["timestamp_ns"] >= 4000000000
+
+
+# ── Embed event edge cases ───────────────────────────────
+
+
+class TestEmbedEventEdgeCases:
+    @patch(
+        f"{_EMB_MOD}.embed_single",
+        return_value=_FAKE_VEC,
+    )
+    @patch(
+        f"{_EMB_MOD}.build_embed_text",
+        return_value="short",  # less than 10 chars
+    )
+    def test_embed_event_short_text_returns_false(
+        self, mock_build, mock_embed, search_db
+    ):
+        from ucw.search import embed_event
+
+        result = embed_event(
+            search_db, "evt-short",
+            {"light_layer": {"intent": "", "topic": "", "summary": "", "concepts": []},
+             "data_layer": {"content": ""}},
+        )
+        assert result is False
+
+    @patch(
+        f"{_EMB_MOD}.embed_single",
+        return_value=_FAKE_VEC,
+    )
+    @patch(
+        f"{_EMB_MOD}.build_embed_text",
+        return_value="",  # empty text
+    )
+    def test_embed_event_empty_text_returns_false(
+        self, mock_build, mock_embed, search_db
+    ):
+        from ucw.search import embed_event
+
+        result = embed_event(
+            search_db, "evt-empty",
+            {"light_layer": {"intent": "", "topic": "", "summary": "", "concepts": []},
+             "data_layer": {"content": ""}},
+        )
+        assert result is False
+
+    @patch(
+        f"{_EMB_MOD}.embed_single",
+        return_value=_FAKE_VEC,
+    )
+    @patch(
+        f"{_EMB_MOD}.build_embed_text",
+        return_value="short",  # less than 10 chars
+    )
+    def test_build_index_skips_short_text(
+        self, mock_build, mock_embed, search_db
+    ):
+        """build_embedding_index skips events with short text."""
+        from ucw.search import build_embedding_index
+
+        count = build_embedding_index(search_db)
+        # All 5 events skipped because text < 10 chars
+        assert count == 0
+
+    @patch(f"{_EMB_MOD}.embed_single")
+    @patch(f"{_EMB_MOD}.cosine_similarity")
+    def test_semantic_search_with_platform_filter(
+        self, mock_cosine, mock_embed, search_db
+    ):
+        """semantic_search respects platform filter."""
+        import numpy as np
+
+        from ucw.search import semantic_search
+
+        mock_embed.return_value = _FAKE_VEC
+        mock_cosine.return_value = 0.9
+
+        conn = sqlite3.connect(str(search_db))
+        blob = np.array(_FAKE_VEC, dtype=np.float32).tobytes()
+        for eid in ["evt-001", "evt-002", "evt-003"]:
+            conn.execute(
+                "INSERT OR REPLACE INTO embedding_cache"
+                " (event_id, embedding) VALUES (?, ?)",
+                (eid, blob),
+            )
+        conn.commit()
+        conn.close()
+
+        results = semantic_search(
+            search_db, "test", platform="cursor"
+        )
+        for r in results:
+            assert r["platform"] == "cursor"
+
+    @patch(f"{_EMB_MOD}.embed_single")
+    @patch(f"{_EMB_MOD}.cosine_similarity")
+    def test_semantic_search_empty_cache(
+        self, mock_cosine, mock_embed, search_db
+    ):
+        """semantic_search with no embeddings returns empty list."""
+        mock_embed.return_value = _FAKE_VEC
+
+        from ucw.search import semantic_search
+
+        results = semantic_search(search_db, "test")
+        assert results == []
+        mock_cosine.assert_not_called()

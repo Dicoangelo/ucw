@@ -306,3 +306,128 @@ class TestIndexPage:
         assert status == 200
         assert "text/html" in headers.get("Content-Type", "")
         assert "UCW Dashboard" in body
+
+    def test_index_trailing_slash(self, web_server):
+        """Root path with trailing slash serves same HTML."""
+        status, headers, body = _get(f"{web_server}/")
+        assert status == 200
+        assert "text/html" in headers.get("Content-Type", "")
+
+
+class TestSearchEndpointAdvanced:
+    def test_search_with_limit(self, web_server):
+        status, headers, data = _get(f"{web_server}/api/search?q=testing&limit=2")
+        assert status == 200
+        assert data["count"] <= 2
+
+    def test_search_with_platform_filter(self, web_server):
+        status, headers, data = _get(f"{web_server}/api/search?q=event&platform=claude")
+        assert status == 200
+        assert "results" in data
+
+    def test_search_no_q_param(self, web_server):
+        """Search endpoint with no q param at all returns empty."""
+        status, headers, data = _get(f"{web_server}/api/search")
+        assert status == 200
+        assert data["results"] == []
+        assert data["method"] == "none"
+
+
+class TestEventsEndpointAdvanced:
+    def test_events_platform_filter(self, web_server):
+        status, headers, data = _get(f"{web_server}/api/events?platform=claude")
+        assert status == 200
+        for evt in data["events"]:
+            assert evt["platform"] == "claude"
+        assert data["total"] <= 5
+
+    def test_events_large_offset(self, web_server):
+        """Offset beyond total returns empty list."""
+        status, headers, data = _get(f"{web_server}/api/events?offset=1000")
+        assert status == 200
+        assert data["events"] == []
+        assert data["total"] == 5
+
+
+class TestGraphEndpointAdvanced:
+    def test_graph_with_limit(self, web_server):
+        status, headers, data = _get(f"{web_server}/api/graph?limit=1")
+        assert status == 200
+        assert len(data["nodes"]) <= 1
+
+
+class TestMomentsEndpointAdvanced:
+    def test_moments_with_limit(self, web_server):
+        status, headers, data = _get(f"{web_server}/api/moments?limit=1")
+        assert status == 200
+        assert len(data) <= 1
+
+
+class TestWebServerNoDatabase:
+    def test_events_no_db(self, tmp_path):
+        """Events endpoint with missing DB returns empty."""
+        original = Config.DB_PATH
+        Config.DB_PATH = tmp_path / "nonexistent.db"
+        port = _find_free_port()
+        server = UCWWebServer()
+        server.start("127.0.0.1", port)
+        base_url = f"http://127.0.0.1:{port}"
+        for _ in range(20):
+            try:
+                urllib.request.urlopen(f"{base_url}/api/health", timeout=1)
+                break
+            except Exception:
+                time.sleep(0.1)
+        try:
+            status, headers, data = _get(f"{base_url}/api/events")
+            assert status == 200
+            assert data["events"] == []
+            assert data["total"] == 0
+        finally:
+            server.stop()
+            Config.DB_PATH = original
+
+    def test_graph_no_db(self, tmp_path):
+        """Graph endpoint with missing DB returns empty."""
+        original = Config.DB_PATH
+        Config.DB_PATH = tmp_path / "nonexistent.db"
+        port = _find_free_port()
+        server = UCWWebServer()
+        server.start("127.0.0.1", port)
+        base_url = f"http://127.0.0.1:{port}"
+        for _ in range(20):
+            try:
+                urllib.request.urlopen(f"{base_url}/api/health", timeout=1)
+                break
+            except Exception:
+                time.sleep(0.1)
+        try:
+            status, headers, data = _get(f"{base_url}/api/graph")
+            assert status == 200
+            assert data["nodes"] == []
+            assert data["edges"] == []
+        finally:
+            server.stop()
+            Config.DB_PATH = original
+
+    def test_moments_no_db(self, tmp_path):
+        """Moments endpoint with missing DB returns empty."""
+        original = Config.DB_PATH
+        Config.DB_PATH = tmp_path / "nonexistent.db"
+        port = _find_free_port()
+        server = UCWWebServer()
+        server.start("127.0.0.1", port)
+        base_url = f"http://127.0.0.1:{port}"
+        for _ in range(20):
+            try:
+                urllib.request.urlopen(f"{base_url}/api/health", timeout=1)
+                break
+            except Exception:
+                time.sleep(0.1)
+        try:
+            status, headers, data = _get(f"{base_url}/api/moments")
+            assert status == 200
+            assert data == []
+        finally:
+            server.stop()
+            Config.DB_PATH = original
