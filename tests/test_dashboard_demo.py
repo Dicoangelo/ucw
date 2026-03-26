@@ -6,7 +6,7 @@ import sqlite3
 import pytest
 
 from ucw.dashboard import get_dashboard_data, render_plain
-from ucw.demo import DEMO_CONVERSATIONS, clean_demo_data, load_demo_data, _ensure_schema
+from ucw.demo import DEMO_CONVERSATIONS, _ensure_schema, clean_demo_data, load_demo_data
 
 
 @pytest.fixture
@@ -114,7 +114,7 @@ def test_demo_platforms(demo_db):
 
 def test_demo_idempotent(demo_db):
     """Loading demo twice doesn't double the event count (INSERT OR IGNORE)."""
-    count1 = load_demo_data(demo_db)
+    load_demo_data(demo_db)
     # Second load generates new UUIDs, so count increases.
     # But session inserts are OR IGNORE, so sessions stay the same.
     conn = sqlite3.connect(str(demo_db))

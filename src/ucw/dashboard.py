@@ -114,7 +114,10 @@ def render_plain(data):
 
     if data.get('graph', {}).get('entities', 0) > 0:
         g = data['graph']
-        lines.append(f"Knowledge Graph: {g['entities']} entities, {g['relationships']} relationships")
+        lines.append(
+            f"Knowledge Graph: {g['entities']} entities, "
+            f"{g['relationships']} relationships"
+        )
         lines.append("")
 
     if data['gut_signals']:

@@ -2,7 +2,6 @@
 
 import sqlite3
 
-import pytest
 from click.testing import CliRunner
 
 from ucw.errors import (

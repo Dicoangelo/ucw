@@ -53,7 +53,10 @@ def init():
     detected = []
 
     # Claude Desktop
-    claude_config = home / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+    claude_config = (
+        home / "Library" / "Application Support"
+        / "Claude" / "claude_desktop_config.json"
+    )
     if claude_config.exists():
         detected.append("Claude Desktop (config found)")
 
@@ -70,7 +73,10 @@ def init():
     ]
     if any(p.exists() for p in chatgpt_paths):
         export_path = next(p for p in chatgpt_paths if p.exists())
-        detected.append(f"ChatGPT (export found at {export_path} \u2014 run `ucw import chatgpt {export_path}`)")
+        detected.append(
+            f"ChatGPT (export found at {export_path}"
+            f" \u2014 run `ucw import chatgpt {export_path}`)"
+        )
 
     # Grok
     grok_dir = home / "Library" / "Application Support" / "Grok"
@@ -223,7 +229,7 @@ def migrate():
     import sqlite3
     conn = sqlite3.connect(str(Config.DB_PATH))
     try:
-        before = get_status(conn)
+        get_status(conn)
         applied = migrate_up(conn)
         after = get_status(conn)
     finally:
@@ -321,7 +327,11 @@ def doctor():
                 elif applied_count == total:
                     _pass(f"Migrations: {applied_count}/{total} applied")
                 else:
-                    _warn(f"Migrations: {applied_count}/{total} applied ({total - applied_count} pending)")
+                    pending = total - applied_count
+                    _warn(
+                        f"Migrations: {applied_count}/{total}"
+                        f" applied ({pending} pending)"
+                    )
             except Exception as exc:
                 _warn(f"Migration check failed: {exc}")
 
@@ -403,7 +413,10 @@ def repair(check):
         # VACUUM
         if check:
             db_size = Config.DB_PATH.stat().st_size
-            click.echo(f"[OK] Database size: {db_size / 1024:.1f} KB (run without --check to VACUUM)")
+            click.echo(
+                f"[OK] Database size: {db_size / 1024:.1f} KB"
+                " (run without --check to VACUUM)"
+            )
         else:
             size_before = Config.DB_PATH.stat().st_size
             conn.execute("VACUUM")

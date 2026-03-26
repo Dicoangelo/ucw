@@ -10,7 +10,7 @@ import json
 import sqlite3
 import time
 from collections import defaultdict
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from ucw.server.logger import get_logger
 
@@ -204,7 +204,8 @@ class ThreadLinker:
         total = row[0] if row else 0
 
         cur = self._conn.execute(
-            "SELECT topic, COUNT(*) FROM conversation_threads GROUP BY topic ORDER BY COUNT(*) DESC LIMIT 10"
+            "SELECT topic, COUNT(*) FROM conversation_threads "
+            "GROUP BY topic ORDER BY COUNT(*) DESC LIMIT 10"
         )
         topic_dist = {r[0]: r[1] for r in cur.fetchall()}
 

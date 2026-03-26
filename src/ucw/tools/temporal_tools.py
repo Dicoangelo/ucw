@@ -108,13 +108,21 @@ async def handle_tool(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
 async def _topic_evolution(args: Dict) -> Dict:
     if not _db:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     conn = _db._conn
     if not conn:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     days = int(args.get("days", 30))
@@ -144,13 +152,21 @@ async def _topic_evolution(args: Dict) -> Dict:
 async def _skill_trajectory(args: Dict) -> Dict:
     if not _db:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     conn = _db._conn
     if not conn:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     topic = args.get("topic", "").strip()
@@ -194,13 +210,21 @@ async def _skill_trajectory(args: Dict) -> Dict:
 async def _temporal_insights(args: Dict) -> Dict:
     if not _db:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     conn = _db._conn
     if not conn:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     days = int(args.get("days", 30))
@@ -222,7 +246,10 @@ async def _temporal_insights(args: Dict) -> Dict:
     output += f"**Span:** {stats.get('span_days', 0)} days\n"
     output += f"**Avg Events/Day:** {stats.get('avg_events_per_day', 0)}\n"
     if stats.get("busiest_day"):
-        output += f"**Busiest Day:** {stats['busiest_day']} ({stats.get('busiest_count', 0)} events)\n"
+        output += (
+            f"**Busiest Day:** {stats['busiest_day']} "
+            f"({stats.get('busiest_count', 0)} events)\n"
+        )
     output += "\n"
 
     # Heatmap

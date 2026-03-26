@@ -10,7 +10,6 @@ from click.testing import CliRunner
 from ucw.cli import main
 from ucw.config import Config
 
-
 FIXTURES = Path(__file__).parent / "fixtures"
 
 

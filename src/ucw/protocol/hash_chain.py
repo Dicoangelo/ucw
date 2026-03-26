@@ -6,8 +6,7 @@ the chain breaks and verification fails.
 """
 
 import hashlib
-import json
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from ucw.server.logger import get_logger
 

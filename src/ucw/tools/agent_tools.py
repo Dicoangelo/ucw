@@ -130,13 +130,21 @@ async def handle_tool(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
 async def _store_learning(args: Dict) -> Dict:
     if not _db:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     conn = _db._conn
     if not conn:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     text_val = args.get("text", "").strip()
@@ -160,7 +168,7 @@ async def _store_learning(args: Dict) -> Dict:
         source_session=_db.session_id,
     )
 
-    output = f"# Learning Stored\n\n"
+    output = "# Learning Stored\n\n"
     output += f"**ID:** {learning_id}\n"
     output += f"**Text:** {text_val[:200]}\n"
     if args.get("project"):
@@ -175,13 +183,21 @@ async def _store_learning(args: Dict) -> Dict:
 async def _search_learnings(args: Dict) -> Dict:
     if not _db:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     conn = _db._conn
     if not conn:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     from ucw.intelligence.agent_memory import AgentMemory
@@ -213,13 +229,21 @@ async def _search_learnings(args: Dict) -> Dict:
 async def _get_context(args: Dict) -> Dict:
     if not _db:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     conn = _db._conn
     if not conn:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     query = args.get("query", "").strip()

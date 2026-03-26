@@ -12,15 +12,12 @@ Covers:
 
 import json
 import sqlite3
-import time
 from datetime import datetime, timedelta
 
 import pytest
-import pytest_asyncio
 
 from ucw.intelligence.agent_memory import AgentMemory
 from ucw.intelligence.temporal import TemporalAnalyzer
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -28,9 +25,7 @@ from ucw.intelligence.temporal import TemporalAnalyzer
 
 def _get_schema_sql():
     """Extract SCHEMA_SQL from sqlite.py without triggering circular imports."""
-    import importlib.util
     import pathlib
-    import sys
 
     src_dir = pathlib.Path(__file__).parent.parent / "src"
     sqlite_file = src_dir / "ucw" / "db" / "sqlite.py"
@@ -530,7 +525,6 @@ class TestAgentTools:
 
         result = await agent_tools.handle_tool("store_learning", {"text": "test"})
         assert result.get("isError") is True
-        conn = None  # nothing to close
 
 
 # ---------------------------------------------------------------------------

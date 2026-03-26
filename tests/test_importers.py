@@ -1,7 +1,5 @@
 """Tests for UCW import adapters — ChatGPT, Cursor, Grok."""
 
-import json
-import os
 import sqlite3
 from pathlib import Path
 
