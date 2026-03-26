@@ -32,7 +32,7 @@ _load_config_env()
 class Config:
     # Server identity
     SERVER_NAME = "ucw"
-    SERVER_VERSION = "0.3.0"
+    SERVER_VERSION = "0.4.0"
     PROTOCOL_VERSION = "2024-11-05"
 
     # Platform identification
