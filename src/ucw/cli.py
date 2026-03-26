@@ -469,6 +469,150 @@ def grok(filepath):
     importer.run(filepath)
 
 
+@main.command("capture-test")
+def capture_test():
+    """Check if UCW is actively capturing your AI conversations."""
+    import time as _time
+    from pathlib import Path as _Path
+
+    from ucw.errors import format_error, safe_db_connect
+
+    passed = 0
+    failed = 0
+    warnings = 0
+
+    def _pass(msg):
+        nonlocal passed
+        passed += 1
+        click.echo(f"[PASS] {msg}")
+
+    def _fail(msg):
+        nonlocal failed
+        failed += 1
+        click.echo(f"[FAIL] {msg}")
+
+    def _warn(msg):
+        nonlocal warnings
+        warnings += 1
+        click.echo(f"[WARN] {msg}")
+
+    click.echo("UCW Capture Test")
+    click.echo("=" * 40)
+
+    # 1. DB exists and writable
+    conn, err = safe_db_connect(Config.DB_PATH)
+    if err is not None:
+        _fail(f"Database: {format_error(err)}")
+        click.echo()
+        click.echo(
+            f"{passed} passed, {failed} failed, "
+            f"{warnings} warnings"
+        )
+        return
+
+    try:
+        total = conn.execute(
+            "SELECT COUNT(*) FROM cognitive_events"
+        ).fetchone()[0]
+        size_kb = Config.DB_PATH.stat().st_size / 1024
+        _pass(f"Database: {total:,} events ({size_kb:.1f} KB)")
+
+        # 2. Recent events (last 24h)
+        now_ns = _time.time_ns()
+        day_ns = 86400 * 10**9
+        recent = conn.execute(
+            "SELECT COUNT(*) FROM cognitive_events "
+            "WHERE timestamp_ns > ?",
+            (now_ns - day_ns,),
+        ).fetchone()[0]
+        last_ts = conn.execute(
+            "SELECT MAX(timestamp_ns) FROM cognitive_events"
+        ).fetchone()[0]
+
+        if recent > 0 and last_ts:
+            ago = _time_ago(last_ts)
+            _pass(
+                f"Recent activity: {recent} events in "
+                f"last 24h (last: {ago})"
+            )
+        elif last_ts:
+            ago = _time_ago(last_ts)
+            _warn(
+                "No events in last 24h "
+                f"(last: {ago}) "
+                "— is Claude running with UCW?"
+            )
+        else:
+            _warn(
+                "No events in last 24h "
+                "— is Claude running with UCW?"
+            )
+
+        # 3. MCP config presence
+        home = _Path.home()
+        found_mcp = []
+
+        claude_desktop = (
+            home / "Library" / "Application Support"
+            / "Claude" / "claude_desktop_config.json"
+        )
+        if claude_desktop.exists():
+            found_mcp.append("Claude Desktop")
+
+        claude_code = home / ".claude" / "settings.json"
+        if claude_code.exists():
+            found_mcp.append("Claude Code")
+
+        if found_mcp:
+            _pass(
+                f"MCP config: Found in {', '.join(found_mcp)}"
+            )
+        else:
+            _fail(
+                "MCP config: Not found "
+                "— run `ucw mcp-config` to set up"
+            )
+
+        # 4. Capture stats — platforms
+        rows = conn.execute(
+            "SELECT platform, COUNT(*) FROM cognitive_events "
+            "GROUP BY platform ORDER BY COUNT(*) DESC"
+        ).fetchall()
+        if rows:
+            parts = [
+                f"{p or 'unknown'} ({c:,})" for p, c in rows
+            ]
+            _pass(f"Platforms: {', '.join(parts)}")
+        else:
+            _warn("No platform data recorded yet")
+
+    finally:
+        conn.close()
+
+    click.echo()
+    click.echo(
+        f"{passed} passed, {failed} failed, "
+        f"{warnings} warnings"
+    )
+
+
+def _time_ago(timestamp_ns):
+    """Format a nanosecond timestamp as a human-readable time ago."""
+    import time as _time
+
+    now = _time.time_ns()
+    diff_s = (now - timestamp_ns) / 10**9
+    if diff_s < 0:
+        return "just now"
+    if diff_s < 60:
+        return f"{int(diff_s)}s ago"
+    if diff_s < 3600:
+        return f"{int(diff_s // 60)}m ago"
+    if diff_s < 86400:
+        return f"{int(diff_s // 3600)}h ago"
+    return f"{int(diff_s // 86400)}d ago"
+
+
 @main.command()
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
 def dashboard(as_json):
@@ -501,6 +645,195 @@ def demo(clean):
     count = load_demo_data()
     click.echo(f"Loaded {count} sample events across 3 platforms.")
     click.echo("Run `ucw dashboard` to see your AI memory overview.")
+
+
+@main.command()
+@click.argument("query")
+@click.option("--platform", default=None, help="Filter by platform")
+@click.option("--after", default=None, help="After ISO date (YYYY-MM-DD)")
+@click.option("--before", default=None, help="Before ISO date (YYYY-MM-DD)")
+@click.option("--limit", default=10, help="Max results (default 10)")
+@click.option("--semantic/--no-semantic", default=None,
+              help="Force semantic or keyword search")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+def search(query, platform, after, before, limit, semantic, as_json):
+    """Search your AI conversations: ucw search 'that thing about auth'."""
+    import json as json_mod
+    from datetime import datetime
+
+    from ucw.search import search as ucw_search
+
+    db_path = Config.DB_PATH
+    if not db_path.exists():
+        click.echo("No database found. Run `ucw init` first.")
+        return
+
+    # Convert ISO dates to nanosecond timestamps
+    after_ns = None
+    before_ns = None
+    if after:
+        dt = datetime.fromisoformat(after)
+        after_ns = int(dt.timestamp() * 10**9)
+    if before:
+        dt = datetime.fromisoformat(before)
+        before_ns = int(dt.timestamp() * 10**9)
+
+    results, method = ucw_search(
+        db_path, query, semantic=semantic,
+        limit=limit, platform=platform,
+        after=after_ns, before=before_ns,
+    )
+
+    if as_json:
+        click.echo(json_mod.dumps(results, indent=2, default=str))
+        return
+
+    if not results:
+        click.echo(f"No results for '{query}'")
+        if method == "keyword":
+            try:
+                from ucw.server.embeddings import embed_single  # noqa: F401
+                click.echo("Tip: Run `ucw index` then search again for semantic results.")
+            except ImportError:
+                click.echo("Tip: Install ucw[embeddings] for semantic search.")
+        return
+
+    click.echo(f"Found {len(results)} results ({method} search):\n")
+    for i, r in enumerate(results, 1):
+        ts = r.get("timestamp_ns", 0)
+        ago = _time_ago(ts) if ts else "unknown"
+        plat = r.get("platform", "unknown")
+        topic = r.get("topic") or "untitled"
+        snippet = (r.get("snippet") or "")[:120]
+        score = r.get("similarity") or r.get("score", 0)
+
+        click.echo(f"  {i}. [{plat}] {topic}  ({ago})")
+        if snippet:
+            click.echo(f"     {snippet}")
+        click.echo(f"     score: {score:.3f}")
+        click.echo()
+
+
+@main.command()
+@click.option("--status", is_flag=True, help="Show index status")
+@click.option("--rebuild", is_flag=True, help="Drop and rebuild cache")
+def index(status, rebuild):
+    """Build or manage the semantic search embedding index."""
+    try:
+        from ucw.server.embeddings import embed_single  # noqa: F401
+    except ImportError:
+        click.echo("Semantic search requires embeddings.")
+        click.echo("Install with: pip install 'ucw[embeddings]'")
+        return
+
+    import sqlite3 as _sqlite3
+
+    db_path = Config.DB_PATH
+    if not db_path.exists():
+        click.echo("No database found. Run `ucw init` first.")
+        return
+
+    if status:
+        conn = _sqlite3.connect(str(db_path))
+        try:
+            total = conn.execute(
+                "SELECT COUNT(*) FROM cognitive_events"
+            ).fetchone()[0]
+            try:
+                cached = conn.execute(
+                    "SELECT COUNT(*) FROM embedding_cache"
+                ).fetchone()[0]
+                model = conn.execute(
+                    "SELECT model FROM embedding_cache LIMIT 1"
+                ).fetchone()
+                model_name = model[0] if model else "none"
+            except _sqlite3.OperationalError:
+                cached = 0
+                model_name = "none"
+            size = db_path.stat().st_size
+        finally:
+            conn.close()
+        click.echo(f"Total events:  {total:,}")
+        click.echo(f"Indexed:       {cached:,}")
+        click.echo(f"Unindexed:     {total - cached:,}")
+        click.echo(f"Model:         {model_name}")
+        click.echo(f"DB size:       {size / 1024:.1f} KB")
+        return
+
+    if rebuild:
+        conn = _sqlite3.connect(str(db_path))
+        try:
+            conn.execute("DELETE FROM embedding_cache")
+            conn.commit()
+        except _sqlite3.OperationalError:
+            pass
+        finally:
+            conn.close()
+        click.echo("Embedding cache cleared.")
+
+    from ucw.search import build_embedding_index
+
+    def _progress(current, total):
+        if total > 0:
+            pct = current * 100 // total
+            bar = "=" * (pct // 5) + ">" + " " * (20 - pct // 5)
+            click.echo(
+                f"\rIndexing {current:,}/{total:,} [{bar}] {pct}%",
+                nl=False,
+            )
+
+    click.echo("Building embedding index...")
+    count = build_embedding_index(db_path, callback=_progress)
+    click.echo()  # newline after progress
+    if count > 0:
+        click.echo(f"Indexed {count:,} new events.")
+    else:
+        click.echo("All events already indexed.")
+
+
+@main.command()
+@click.option("--port", default=7077, help="Port (default 7077)")
+@click.option("--host", default="127.0.0.1", help="Host (default 127.0.0.1)")
+@click.option("--no-open", is_flag=True, help="Don't open browser")
+def web(port, host, no_open):
+    """Launch the UCW web dashboard in your browser."""
+    from ucw.web import UCWWebServer
+
+    db_path = Config.DB_PATH
+    if not db_path.exists():
+        click.echo("No database found. Run `ucw init && ucw demo` first.")
+        return
+
+    # Find available port
+    import socket
+    actual_port = port
+    for offset in range(11):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.bind((host, port + offset))
+            sock.close()
+            actual_port = port + offset
+            break
+        except OSError:
+            if offset == 10:
+                click.echo(
+                    f"Ports {port}-{port + 10} all in use."
+                )
+                return
+            continue
+
+    url = f"http://{host}:{actual_port}"
+    click.echo(f"UCW Dashboard running at {url}")
+
+    if not no_open:
+        import webbrowser
+        webbrowser.open(url)
+
+    try:
+        server = UCWWebServer(host, actual_port)
+        server.serve_forever()
+    except KeyboardInterrupt:
+        click.echo("\nDashboard stopped.")
 
 
 def _find_ucw_executable() -> str:

@@ -80,6 +80,48 @@ def get_dashboard_data(db_path=None):
         ).fetchall()
         data['gut_signals'] = [(r[0], r[1]) for r in rows]
 
+        # Capture health
+        import time as _time
+        now_ns = _time.time_ns()
+        day_ns = 86400 * 10**9
+        week_ns = 7 * day_ns
+
+        events_24h = conn.execute(
+            "SELECT COUNT(*) FROM cognitive_events "
+            "WHERE timestamp_ns > ?",
+            (now_ns - day_ns,),
+        ).fetchone()[0]
+
+        events_7d = conn.execute(
+            "SELECT COUNT(*) FROM cognitive_events "
+            "WHERE timestamp_ns > ?",
+            (now_ns - week_ns,),
+        ).fetchone()[0]
+
+        last_event = conn.execute(
+            "SELECT MAX(timestamp_ns) FROM cognitive_events"
+        ).fetchone()[0]
+
+        last_age = (
+            (now_ns - last_event) / 10**9
+            if last_event else None
+        )
+
+        active_platforms = conn.execute(
+            "SELECT DISTINCT platform FROM cognitive_events "
+            "WHERE timestamp_ns > ?",
+            (now_ns - week_ns,),
+        ).fetchall()
+
+        data['capture_health'] = {
+            'last_event_age_seconds': last_age,
+            'events_last_24h': events_24h,
+            'events_last_7d': events_7d,
+            'active_platforms': [
+                r[0] for r in active_platforms
+            ],
+        }
+
     finally:
         conn.close()
 
@@ -124,6 +166,37 @@ def render_plain(data):
         lines.append("Gut Signals:")
         for sig, count in data['gut_signals']:
             lines.append(f"  {sig:20s} {count:>5}")
+        lines.append("")
+
+    ch = data.get('capture_health')
+    if ch:
+        lines.append("Capture Health:")
+        e24 = ch['events_last_24h']
+        e7d = ch['events_last_7d']
+        if e24 > 0:
+            lines.append(
+                f"  [OK] {e24} events in last 24h, "
+                f"{e7d} in last 7d"
+            )
+        else:
+            lines.append(
+                f"  [--] 0 events in last 24h, "
+                f"{e7d} in last 7d"
+            )
+
+        age = ch['last_event_age_seconds']
+        if age is not None:
+            lines.append(
+                f"  Last capture: {_fmt_age(age)}"
+            )
+        else:
+            lines.append("  Last capture: never")
+
+        platforms = ch['active_platforms']
+        if platforms:
+            lines.append(
+                f"  Active: {', '.join(platforms)}"
+            )
 
     return "\n".join(lines)
 
@@ -149,7 +222,7 @@ def render_rich(data):
         f"[bold]{data['sessions']}[/bold] sessions | "
         f"[bold]{_fmt_bytes(data['total_bytes'])}[/bold]",
         title="[bold blue]UCW Dashboard[/bold blue]",
-        subtitle="v0.3.0",
+        subtitle="v0.4.0",
     ))
 
     # Platforms table
@@ -189,6 +262,28 @@ def render_rich(data):
             table.add_row(sig, str(count))
         console.print(table)
 
+    # Capture health
+    ch = data.get('capture_health')
+    if ch:
+        e24 = ch['events_last_24h']
+        e7d = ch['events_last_7d']
+        age = ch['last_event_age_seconds']
+        platforms = ch['active_platforms']
+
+        age_str = _fmt_age(age) if age is not None else "never"
+        plat_str = (
+            ", ".join(platforms) if platforms else "none"
+        )
+        status = "[green]OK[/green]" if e24 > 0 else "[yellow]--[/yellow]"
+
+        console.print(Panel(
+            f"{status} {e24} events in last 24h, "
+            f"{e7d} in last 7d\n"
+            f"Last capture: {age_str}\n"
+            f"Active: {plat_str}",
+            title="[bold]Capture Health[/bold]",
+        ))
+
 
 def _fmt_bytes(n):
     """Format byte count as human-readable string."""
@@ -197,3 +292,18 @@ def _fmt_bytes(n):
             return f"{n:.1f} {unit}" if unit != 'B' else f"{n} {unit}"
         n /= 1024
     return f"{n:.1f} TB"
+
+
+def _fmt_age(seconds):
+    """Format seconds as a human-readable age string."""
+    if seconds is None:
+        return "never"
+    if seconds < 0:
+        return "just now"
+    if seconds < 60:
+        return f"{int(seconds)}s ago"
+    if seconds < 3600:
+        return f"{int(seconds // 60)}m ago"
+    if seconds < 86400:
+        return f"{int(seconds // 3600)}h ago"
+    return f"{int(seconds // 86400)}d ago"
