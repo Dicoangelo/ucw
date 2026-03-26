@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-03-25
+### Added
+- 15 new MCP tools across 5 modules (8 → 23 total):
+  - Knowledge graph: entity extraction, relationship mapping, queries
+  - Real-time intelligence: event streaming, alerting, thread linking
+  - Agent integration: cross-agent memory, trust scoring, context handoff
+  - Temporal analysis: time-based patterns, decay detection, activity maps
+  - Proof-of-cognition: hash chains, Merkle trees, cryptographic receipts
+- Import adapters: `ucw import chatgpt`, `ucw import cursor`, `ucw import grok`
+- Rich CLI dashboard: `ucw dashboard` with platform breakdown and topics
+- Demo data: `ucw demo` loads 52 sample events across 3 platforms
+- Health tools: `ucw doctor` diagnostics, `ucw repair` with VACUUM
+- Database migrations system with 5 schema migrations
+- Error hierarchy (UCWError) with actionable messages and hints
+- 6 new CLI commands (4 → 10 total)
+- Test coverage expanded from 153 to 469 tests
+
+### Changed
+- `ucw init` now detects installed AI tools and shows import suggestions
+- README rewritten for external users with market language
+- pyproject.toml: optional dependency groups (ui, embeddings, all, dev)
+- Tool modules now show helpful hints when DB is not ready
+- Version bumped to 0.3.0
+
 ## [2026-03-17]
 ### Changed
 - Upgrade GitHub Actions for Node.js 24 compatibility

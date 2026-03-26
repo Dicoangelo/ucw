@@ -8,7 +8,6 @@ Extracts: person, organization, technology, concept, project, tool, platform
 import re
 from typing import Dict, List, Optional
 
-
 # Known technology terms (lowercase for matching)
 TECHNOLOGY_TERMS = {
     "python", "javascript", "typescript", "react", "vue", "angular", "svelte",
@@ -144,7 +143,10 @@ def extract_entities(
     )
     for match in project_pattern.finditer(combined):
         name = match.group(1)
-        if name.lower() not in seen and name.lower() not in {"the", "a", "an", "is", "was", "and", "or", "for"}:
+        stop_words = {
+            "the", "a", "an", "is", "was", "and", "or", "for",
+        }
+        if name.lower() not in seen and name.lower() not in stop_words:
             _add_entity(seen, name, "project", 0.6)
 
     return list(seen.values())

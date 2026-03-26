@@ -124,7 +124,11 @@ async def handle_tool(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
 async def _alerts_query(args: Dict) -> Dict:
     if not _db or not _db._conn:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     from ucw.intelligence.alerting import AlertEngine
@@ -162,7 +166,11 @@ async def _alerts_query(args: Dict) -> Dict:
 async def _thread_analysis(args: Dict) -> Dict:
     if not _db or not _db._conn:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     from ucw.intelligence.thread_linker import ThreadLinker
@@ -199,7 +207,10 @@ async def _thread_analysis(args: Dict) -> Dict:
         out = f"# Cross-Platform Threads ({len(threads)} found)\n\n"
         for t in threads[:limit]:
             out += f"**Thread:** `{t['thread_id']}` — {t['topic']}\n"
-            out += f"  Score: {t['combined_score']:.4f} | Platforms: {t.get('platform_count', '?')}\n"
+            out += (
+                f"  Score: {t['combined_score']:.4f} "
+                f"| Platforms: {t.get('platform_count', '?')}\n"
+            )
             out += f"  Sessions: {json.dumps(t['platform_sessions'])}\n\n"
 
         return tool_result_content([text_content(out)])
@@ -228,7 +239,11 @@ async def _thread_analysis(args: Dict) -> Dict:
 async def _link_threads(args: Dict) -> Dict:
     if not _db or not _db._conn:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     from ucw.intelligence.thread_linker import ThreadLinker
@@ -270,11 +285,15 @@ async def _link_threads(args: Dict) -> Dict:
 
     threads = linker.link_events_to_threads(events)
 
-    out = f"# Link Threads\n\n"
+    out = "# Link Threads\n\n"
     out += f"**Scanned:** {len(events)} events\n"
     out += f"**Threads created/updated:** {len(threads)}\n\n"
 
     for t in threads[:20]:
-        out += f"- `{t['thread_id']}` — {t['topic']} (score: {t['combined_score']:.4f}, events: {t['event_count']})\n"
+        out += (
+            f"- `{t['thread_id']}` — {t['topic']} "
+            f"(score: {t['combined_score']:.4f}, "
+            f"events: {t['event_count']})\n"
+        )
 
     return tool_result_content([text_content(out)])

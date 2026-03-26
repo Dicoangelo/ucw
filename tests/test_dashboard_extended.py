@@ -2,10 +2,7 @@
 
 import sqlite3
 
-import pytest
-
 from ucw.dashboard import _fmt_bytes, get_dashboard_data, render_plain
-
 
 # ── _fmt_bytes formatting ────────────────────────────────────────────────
 

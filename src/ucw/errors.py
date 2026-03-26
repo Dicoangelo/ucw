@@ -37,7 +37,8 @@ class DatabaseLockedError(UCWError):
     def __init__(self, path):
         super().__init__(
             f"Database is locked: {path}",
-            "Another UCW process may be running. Check with `ps aux | grep ucw` or wait a moment and retry."
+            "Another UCW process may be running. Check with "
+            "`ps aux | grep ucw` or wait a moment and retry."
         )
 
 

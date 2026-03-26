@@ -7,7 +7,6 @@ Individual events can be verified against the root via audit proofs.
 
 import hashlib
 import json
-import time
 from typing import Dict, List, Optional
 
 from ucw.server.logger import get_logger
@@ -153,7 +152,10 @@ class MerkleStore:
                     event_ids,
                 )
                 row = cur.fetchone()
-                ts_range = json.dumps({"start_ns": row[0], "end_ns": row[1]}) if row and row[0] else None
+                ts_range = (
+                    json.dumps({"start_ns": row[0], "end_ns": row[1]})
+                    if row and row[0] else None
+                )
             else:
                 ts_range = None
         except Exception:

@@ -7,9 +7,8 @@ Migrations are idempotent — running twice produces the same result.
 
 import importlib
 import sqlite3
-import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from ucw.server.logger import get_logger
 
@@ -39,7 +38,10 @@ def _applied_versions(conn: sqlite3.Connection) -> set:
 
 
 def _discover_migrations() -> List[Tuple[int, str, str]]:
-    """Discover migration modules in migrations/ dir. Returns sorted (version, name, module_name)."""
+    """Discover migration modules in migrations/ dir.
+
+    Returns sorted (version, name, module_name).
+    """
     migrations = []
     if not MIGRATIONS_DIR.exists():
         return migrations

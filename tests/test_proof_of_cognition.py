@@ -1,15 +1,14 @@
 """Tests for Proof-of-Cognition: hash chain, Merkle tree, receipts, and MCP tools."""
 
 import hashlib
-import json
+import importlib
+import importlib.util
 import time
+from pathlib import Path
 
 import pytest
 
 from ucw.db.sqlite import CaptureDB
-import importlib
-import importlib.util
-from pathlib import Path
 
 # migrations.py is shadowed by the migrations/ package, so load it directly
 _mig_spec = importlib.util.spec_from_file_location(
@@ -19,11 +18,10 @@ _mig_spec = importlib.util.spec_from_file_location(
 _mig_mod = importlib.util.module_from_spec(_mig_spec)
 _mig_spec.loader.exec_module(_mig_mod)
 migrate_up = _mig_mod.migrate_up
-from ucw.protocol.hash_chain import HashChain, HashChainStore
-from ucw.protocol.merkle import MerkleTree, MerkleStore
-from ucw.server.capture import CaptureEvent
-from ucw.tools import proof_tools
-
+from ucw.protocol.hash_chain import HashChain, HashChainStore  # noqa: E402
+from ucw.protocol.merkle import MerkleStore, MerkleTree  # noqa: E402
+from ucw.server.capture import CaptureEvent  # noqa: E402
+from ucw.tools import proof_tools  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers

@@ -35,7 +35,9 @@ class GraphStore:
         try:
             self._conn.execute(
                 """INSERT INTO entities
-                   (entity_id, name, type, confidence, first_seen_ns, last_seen_ns, event_count, metadata)
+                   (entity_id, name, type, confidence,
+                    first_seen_ns, last_seen_ns,
+                    event_count, metadata)
                    VALUES (?, ?, ?, ?, ?, ?, 1, '{}')
                    ON CONFLICT(entity_id) DO UPDATE SET
                        confidence = MAX(entities.confidence, excluded.confidence),
@@ -68,7 +70,8 @@ class GraphStore:
         try:
             # Check if relationship exists
             cur = self._conn.execute(
-                "SELECT evidence_event_ids, occurrence_count FROM entity_relationships WHERE rel_id = ?",
+                "SELECT evidence_event_ids, occurrence_count "
+                "FROM entity_relationships WHERE rel_id = ?",
                 (rel_id,),
             )
             existing = cur.fetchone()
@@ -87,7 +90,8 @@ class GraphStore:
 
                 self._conn.execute(
                     """UPDATE entity_relationships
-                       SET weight = ?, evidence_event_ids = ?, last_seen_ns = ?, occurrence_count = ?
+                       SET weight = ?, evidence_event_ids = ?,
+                           last_seen_ns = ?, occurrence_count = ?
                        WHERE rel_id = ?""",
                     (new_weight, json.dumps(evidence_ids), timestamp_ns, new_count, rel_id),
                 )
@@ -95,8 +99,10 @@ class GraphStore:
                 # Insert new
                 self._conn.execute(
                     """INSERT INTO entity_relationships
-                       (rel_id, source_entity_id, target_entity_id, type, weight,
-                        evidence_event_ids, first_seen_ns, last_seen_ns, occurrence_count)
+                       (rel_id, source_entity_id,
+                        target_entity_id, type, weight,
+                        evidence_event_ids, first_seen_ns,
+                        last_seen_ns, occurrence_count)
                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)""",
                     (rel_id, source_id, target_id, rel_type, weight,
                      json.dumps([event_id]), timestamp_ns, timestamp_ns),
@@ -220,7 +226,8 @@ class GraphStore:
             entity_types = {row[0]: row[1] for row in cur.fetchall()}
 
             cur = self._conn.execute(
-                "SELECT type, COUNT(*) FROM entity_relationships GROUP BY type ORDER BY COUNT(*) DESC"
+                "SELECT type, COUNT(*) FROM entity_relationships "
+                "GROUP BY type ORDER BY COUNT(*) DESC"
             )
             rel_types = {row[0]: row[1] for row in cur.fetchall()}
 

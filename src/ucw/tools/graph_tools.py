@@ -6,8 +6,6 @@ Tools:
   graph_analyze    — Analyze entity clusters and relationship patterns
 """
 
-import hashlib
-import json
 from typing import Any, Dict, List
 
 from ucw.intelligence.graph_store import GraphStore
@@ -103,7 +101,11 @@ async def handle_tool(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
 async def _knowledge_graph(args: Dict) -> Dict:
     if not _db or not _db._conn:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     store = GraphStore(_db._conn)
@@ -151,7 +153,11 @@ async def _knowledge_graph(args: Dict) -> Dict:
 async def _graph_analyze(args: Dict) -> Dict:
     if not _db or not _db._conn:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     store = GraphStore(_db._conn)

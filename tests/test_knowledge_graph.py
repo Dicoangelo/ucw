@@ -16,9 +16,8 @@ import time
 import pytest
 
 from ucw.intelligence.entity_extractor import extract_entities
-from ucw.intelligence.relationship_mapper import map_relationships
 from ucw.intelligence.graph_store import GraphStore
-
+from ucw.intelligence.relationship_mapper import map_relationships
 
 # Load the migration module (filename starts with digits, can't import normally)
 _migration_mod = importlib.import_module("ucw.db.migrations.001_knowledge_graph")
@@ -163,8 +162,9 @@ class TestEntityExtractor:
 
     def test_no_external_deps(self):
         """Ensure the extractor does not import spacy, nltk, etc."""
-        import ucw.intelligence.entity_extractor as mod
         import sys
+
+        import ucw.intelligence.entity_extractor as mod
         for dep in ("spacy", "nltk", "transformers", "stanza"):
             assert dep not in sys.modules or dep not in dir(mod)
 
@@ -409,10 +409,16 @@ class TestGraphTools:
         graph_store.upsert_entity(src_id, "python", "technology", 0.9, time.time_ns())
         graph_store.upsert_entity(tgt_id, "claude", "tool", 0.9, time.time_ns())
         rel_id = _make_rel_id("python", "claude", "co_occurrence")
-        graph_store.upsert_relationship(rel_id, src_id, tgt_id, "co_occurrence", 0.5, "e1", time.time_ns())
+        graph_store.upsert_relationship(
+            rel_id, src_id, tgt_id, "co_occurrence",
+            0.5, "e1", time.time_ns(),
+        )
 
         from ucw.tools.graph_tools import handle_tool
-        result = await handle_tool("knowledge_graph", {"query": "python", "action": "relationships"})
+        result = await handle_tool(
+            "knowledge_graph",
+            {"query": "python", "action": "relationships"},
+        )
         text = result["content"][0]["text"]
         assert "claude" in text.lower()
 

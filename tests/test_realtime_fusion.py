@@ -8,13 +8,11 @@ Covers:
   - intelligence_tools MCP tool handlers
 """
 
-import asyncio
 import json
 import sqlite3
 import time
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -24,11 +22,15 @@ import pytest
 def db_conn(tmp_ucw_dir):
     """Create a fresh SQLite DB with base schema + migrations."""
     # Import SCHEMA_SQL — lazy to avoid circular import at collection time
-    from ucw.db.sqlite import SCHEMA_SQL
-
     # migrations.py is shadowed by migrations/ package dir — load from file
-    import importlib.util, pathlib
-    _mig_path = pathlib.Path(__file__).resolve().parent.parent / "src" / "ucw" / "db" / "migrations.py"
+    import importlib.util
+    import pathlib
+
+    from ucw.db.sqlite import SCHEMA_SQL
+    _mig_path = (
+        pathlib.Path(__file__).resolve().parent.parent
+        / "src" / "ucw" / "db" / "migrations.py"
+    )
     _spec = importlib.util.spec_from_file_location("_ucw_mig", str(_mig_path))
     _mig = importlib.util.module_from_spec(_spec)
     _spec.loader.exec_module(_mig)
@@ -93,7 +95,8 @@ class TestEventStream:
     def test_subscribe_and_count(self):
         from ucw.intelligence.event_stream import EventStream
         es = EventStream()
-        cb = lambda e: None
+        def cb(e):
+            return None
         es.subscribe("capture", cb)
         assert es.subscriber_count("capture") == 1
         assert es.subscriber_count() == 1
@@ -101,8 +104,10 @@ class TestEventStream:
     def test_subscribe_multiple_channels(self):
         from ucw.intelligence.event_stream import EventStream
         es = EventStream()
-        cb1 = lambda e: None
-        cb2 = lambda e: None
+        def cb1(e):
+            return None
+        def cb2(e):
+            return None
         es.subscribe("capture", cb1)
         es.subscribe("emergence", cb2)
         assert es.subscriber_count("capture") == 1
@@ -112,7 +117,8 @@ class TestEventStream:
     def test_unsubscribe(self):
         from ucw.intelligence.event_stream import EventStream
         es = EventStream()
-        cb = lambda e: None
+        def cb(e):
+            return None
         es.subscribe("capture", cb)
         assert es.subscriber_count("capture") == 1
         es.unsubscribe("capture", cb)
@@ -121,7 +127,8 @@ class TestEventStream:
     def test_unsubscribe_nonexistent(self):
         from ucw.intelligence.event_stream import EventStream
         es = EventStream()
-        cb = lambda e: None
+        def cb(e):
+            return None
         # Should not raise
         es.unsubscribe("capture", cb)
         es.unsubscribe("nonexistent", cb)
@@ -129,7 +136,8 @@ class TestEventStream:
     def test_duplicate_subscribe(self):
         from ucw.intelligence.event_stream import EventStream
         es = EventStream()
-        cb = lambda e: None
+        def cb(e):
+            return None
         es.subscribe("capture", cb)
         es.subscribe("capture", cb)  # Duplicate
         assert es.subscriber_count("capture") == 1
@@ -213,7 +221,7 @@ class TestAlertEngine:
     def test_create_alert_with_evidence(self, db_conn):
         from ucw.intelligence.alerting import AlertEngine
         engine = AlertEngine(db_conn)
-        aid = engine.create_alert("test", "warning", "Msg", evidence_event_ids=["e1", "e2"])
+        engine.create_alert("test", "warning", "Msg", evidence_event_ids=["e1", "e2"])
         alerts = engine.get_alerts()
         assert len(alerts) == 1
         assert alerts[0]["evidence_event_ids"] == ["e1", "e2"]
@@ -329,7 +337,7 @@ class TestAlertEngine:
     def test_alert_unicode_message(self, db_conn):
         from ucw.intelligence.alerting import AlertEngine
         engine = AlertEngine(db_conn)
-        aid = engine.create_alert("test", "info", "Alert: \u2728 breakthrough in \u00e9mergence")
+        engine.create_alert("test", "info", "Alert: \u2728 breakthrough in \u00e9mergence")
         alerts = engine.get_alerts()
         assert len(alerts) == 1
         assert "\u2728" in alerts[0]["message"]
@@ -606,7 +614,9 @@ class TestIntelligenceTools:
     async def test_thread_analysis_cross_platform(self, mock_db):
         from ucw.tools import intelligence_tools
         intelligence_tools._db = mock_db
-        result = await intelligence_tools.handle_tool("thread_analysis", {"action": "cross_platform"})
+        result = await intelligence_tools.handle_tool(
+            "thread_analysis", {"action": "cross_platform"},
+        )
         assert "content" in result
 
     @pytest.mark.asyncio

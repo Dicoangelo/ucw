@@ -2,11 +2,8 @@
 
 import hashlib
 
-import pytest
-
 from ucw.protocol.hash_chain import HashChain
 from ucw.protocol.merkle import MerkleTree
-
 
 # ── HashChain extended tests ─────────────────────────────────────────────
 

@@ -8,7 +8,6 @@ Tools:
   proof_status      -- Show proof-of-cognition status: chain length, receipts, integrity
 """
 
-import json
 from typing import Any, Dict, List
 
 from ucw.server.logger import get_logger
@@ -121,7 +120,11 @@ async def handle_tool(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
 async def _verify_chain(args: Dict) -> Dict:
     if not _db or not _db._conn:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     from ucw.protocol.hash_chain import HashChainStore
@@ -137,7 +140,7 @@ async def _verify_chain(args: Dict) -> Dict:
 
     status = "VALID" if result["valid"] else "BROKEN"
     out = f"# Chain Verification: {status}\n\n"
-    out += f"| Field | Value |\n|-------|-------|\n"
+    out += "| Field | Value |\n|-------|-------|\n"
     out += f"| Session | `{session_id}` |\n"
     out += f"| Events Verified | {result['verified_count']} |\n"
     out += f"| Chain Valid | {result['valid']} |\n"
@@ -156,7 +159,11 @@ async def _verify_chain(args: Dict) -> Dict:
 async def _generate_receipt(args: Dict) -> Dict:
     if not _db or not _db._conn:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     from ucw.protocol.hash_chain import HashChainStore
@@ -214,8 +221,8 @@ async def _generate_receipt(args: Dict) -> Dict:
         summary=summary,
     )
 
-    out = f"# Proof-of-Cognition Receipt Generated\n\n"
-    out += f"| Field | Value |\n|-------|-------|\n"
+    out = "# Proof-of-Cognition Receipt Generated\n\n"
+    out += "| Field | Value |\n|-------|-------|\n"
     out += f"| Receipt ID | `{receipt_id}` |\n"
     out += f"| Session | `{session_id}` |\n"
     out += f"| Events | {len(events)} |\n"
@@ -231,7 +238,11 @@ async def _generate_receipt(args: Dict) -> Dict:
 async def _verify_receipt(args: Dict) -> Dict:
     if not _db or not _db._conn:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     from ucw.protocol.merkle import MerkleStore
@@ -247,7 +258,7 @@ async def _verify_receipt(args: Dict) -> Dict:
 
     status = "VALID" if result["valid"] else "INVALID"
     out = f"# Receipt Verification: {status}\n\n"
-    out += f"| Field | Value |\n|-------|-------|\n"
+    out += "| Field | Value |\n|-------|-------|\n"
     out += f"| Receipt ID | `{result['receipt_id']}` |\n"
     out += f"| Event Count | {result['event_count']} |\n"
     out += f"| Merkle Root | `{(result.get('merkle_root') or 'N/A')[:32]}` |\n"
@@ -262,7 +273,11 @@ async def _verify_receipt(args: Dict) -> Dict:
 async def _proof_status(args: Dict) -> Dict:
     if not _db or not _db._conn:
         return tool_result_content(
-            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
+            [text_content(
+                "Database not initialized. The UCW server may still be "
+                "starting up — try again in a moment, or run "
+                "`ucw doctor` to diagnose."
+            )], is_error=True
         )
 
     from ucw.protocol.hash_chain import HashChainStore
@@ -309,7 +324,7 @@ async def _proof_status(args: Dict) -> Dict:
 
     out = "# Proof-of-Cognition Status\n\n"
     out += "## Current Session\n\n"
-    out += f"| Field | Value |\n|-------|-------|\n"
+    out += "| Field | Value |\n|-------|-------|\n"
     out += f"| Session ID | `{session_id or 'N/A'}` |\n"
     out += f"| Chain Length | {len(events)} |\n"
     out += f"| Chain Integrity | {chain_status} |\n"
@@ -317,7 +332,7 @@ async def _proof_status(args: Dict) -> Dict:
     out += f"| Session Receipts | {len(session_receipts)} |\n\n"
 
     out += "## Global Stats\n\n"
-    out += f"| Field | Value |\n|-------|-------|\n"
+    out += "| Field | Value |\n|-------|-------|\n"
     out += f"| Total Chained Events | {total_chained} |\n"
     out += f"| Total Receipts | {len(all_receipts)} |\n"
 

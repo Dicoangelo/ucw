@@ -8,7 +8,7 @@ Channels:
   cross_platform   — Cross-platform matches
 """
 
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List
 
 from ucw.server.logger import get_logger
 
