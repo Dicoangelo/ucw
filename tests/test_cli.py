@@ -53,4 +53,4 @@ class TestCLI:
     def test_status_no_db(self, runner, tmp_ucw_dir):
         result = runner.invoke(main, ["status"])
         assert result.exit_code == 0
-        assert "No database found" in result.output
+        assert "Database not found" in result.output

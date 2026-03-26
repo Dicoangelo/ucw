@@ -1,0 +1,28 @@
+{
+  "conversations": [
+    {
+      "id": "cursor-session-001",
+      "title": "Refactoring Database Module",
+      "messages": [
+        {"role": "user", "content": "Refactor the database connection class to use connection pooling", "timestamp": 1710300000.0},
+        {"role": "assistant", "content": "I'll refactor the database class to use a connection pool. Here's the updated implementation with a pool size parameter and context manager support.", "timestamp": 1710300010.0},
+        {"role": "user", "content": "Add error handling for connection timeouts", "timestamp": 1710300020.0},
+        {"role": "assistant", "content": "Added try/except blocks around connection acquisition with configurable timeout. If the pool is exhausted, it raises a ConnectionPoolExhausted error.", "timestamp": 1710300030.0},
+        {"role": "user", "content": "Write unit tests for the connection pool", "timestamp": 1710300040.0},
+        {"role": "assistant", "content": "Here are comprehensive tests: test_pool_creation, test_acquire_release, test_pool_exhaustion, test_timeout_handling, and test_concurrent_access using threading.", "timestamp": 1710300050.0}
+      ]
+    },
+    {
+      "id": "cursor-session-002",
+      "title": "API Endpoint Design",
+      "messages": [
+        {"role": "user", "content": "Design a REST API for the cognitive wallet platform", "timestamp": 1710400000.0},
+        {"role": "assistant", "content": "Here's a RESTful API design: GET /events for listing, POST /events for capture, GET /sessions for session listing, GET /coherence for cross-platform analysis.", "timestamp": 1710400010.0},
+        {"role": "user", "content": "Add authentication middleware using JWT tokens", "timestamp": 1710400020.0},
+        {"role": "assistant", "content": "I'll add JWT middleware with token validation, refresh tokens, and role-based access control. The middleware checks Authorization headers and validates against the signing key.", "timestamp": 1710400030.0},
+        {"role": "user", "content": "What about rate limiting?", "timestamp": 1710400040.0},
+        {"role": "assistant", "content": "Added a sliding window rate limiter using Redis. Default: 100 requests per minute per API key. Returns 429 with Retry-After header when exceeded.", "timestamp": 1710400050.0}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,162 @@
+[
+  {
+    "title": "Machine Learning Basics",
+    "id": "conv-ml-001",
+    "create_time": 1710000000.0,
+    "update_time": 1710001000.0,
+    "mapping": {
+      "node-1": {
+        "message": {
+          "author": {"role": "system"},
+          "content": {"parts": ["You are a helpful assistant."]},
+          "create_time": 1710000000.0
+        }
+      },
+      "node-2": {
+        "message": {
+          "author": {"role": "user"},
+          "content": {"parts": ["What is gradient descent?"]},
+          "create_time": 1710000010.0
+        }
+      },
+      "node-3": {
+        "message": {
+          "author": {"role": "assistant"},
+          "content": {"parts": ["Gradient descent is an optimization algorithm used to minimize a function by iteratively moving in the direction of steepest descent."]},
+          "create_time": 1710000020.0
+        }
+      },
+      "node-4": {
+        "message": {
+          "author": {"role": "user"},
+          "content": {"parts": ["Can you explain the learning rate?"]},
+          "create_time": 1710000030.0
+        }
+      },
+      "node-5": {
+        "message": {
+          "author": {"role": "assistant"},
+          "content": {"parts": ["The learning rate is a hyperparameter that controls how much the model weights are updated during training. A high learning rate can cause overshooting, while a low one leads to slow convergence."]},
+          "create_time": 1710000040.0
+        }
+      },
+      "node-6": {
+        "message": null
+      },
+      "node-7": {
+        "message": {
+          "author": {"role": "user"},
+          "content": {"parts": ["What about batch size?"]},
+          "create_time": 1710000050.0
+        }
+      },
+      "node-8": {
+        "message": {
+          "author": {"role": "assistant"},
+          "content": {"parts": ["Batch size determines the number of training samples used in one forward/backward pass. Larger batches are more stable but use more memory."]},
+          "create_time": 1710000060.0
+        }
+      }
+    }
+  },
+  {
+    "title": "Python Database Patterns",
+    "id": "conv-db-002",
+    "create_time": 1710100000.0,
+    "update_time": 1710101000.0,
+    "mapping": {
+      "node-1": {
+        "message": {
+          "author": {"role": "user"},
+          "content": {"parts": ["How do I use SQLite with Python?"]},
+          "create_time": 1710100010.0
+        }
+      },
+      "node-2": {
+        "message": {
+          "author": {"role": "assistant"},
+          "content": {"parts": ["You can use the sqlite3 module from the standard library. Import it, create a connection with sqlite3.connect(), and use cursors to execute SQL queries."]},
+          "create_time": 1710100020.0
+        }
+      },
+      "node-3": {
+        "message": {
+          "author": {"role": "user"},
+          "content": {"parts": ["What is WAL mode?"]},
+          "create_time": 1710100030.0
+        }
+      },
+      "node-4": {
+        "message": {
+          "author": {"role": "assistant"},
+          "content": {"parts": ["WAL (Write-Ahead Logging) is a journaling mode in SQLite that allows concurrent reads and writes. Enable it with PRAGMA journal_mode=wal."]},
+          "create_time": 1710100040.0
+        }
+      },
+      "node-5": {
+        "message": {
+          "author": {"role": "user"},
+          "content": {"parts": ["How about schema migrations?"]},
+          "create_time": 1710100050.0
+        }
+      },
+      "node-6": {
+        "message": {
+          "author": {"role": "assistant"},
+          "content": {"parts": ["For schema migrations in SQLite, you can track applied versions in a migrations table and run ALTER TABLE statements sequentially. Tools like Alembic also work."]},
+          "create_time": 1710100060.0
+        }
+      }
+    }
+  },
+  {
+    "title": "MCP Protocol Discussion",
+    "id": "conv-mcp-003",
+    "create_time": 1710200000.0,
+    "update_time": 1710201000.0,
+    "mapping": {
+      "node-1": {
+        "message": {
+          "author": {"role": "user"},
+          "content": {"parts": ["Explain the Model Context Protocol"]},
+          "create_time": 1710200010.0
+        }
+      },
+      "node-2": {
+        "message": {
+          "author": {"role": "assistant"},
+          "content": {"parts": ["The Model Context Protocol (MCP) is a standard for connecting AI assistants to external tools and data sources. It uses JSON-RPC over stdio transport."]},
+          "create_time": 1710200020.0
+        }
+      },
+      "node-3": {
+        "message": {
+          "author": {"role": "user"},
+          "content": {"parts": ["How does tool calling work in MCP?"]},
+          "create_time": 1710200030.0
+        }
+      },
+      "node-4": {
+        "message": {
+          "author": {"role": "assistant"},
+          "content": {"parts": ["In MCP, the client sends a tools/call request with a tool name and arguments. The server executes the tool and returns results as content blocks."]},
+          "create_time": 1710200040.0
+        }
+      },
+      "node-5": {
+        "message": {
+          "author": {"role": "user"},
+          "content": {"parts": ["Can MCP handle cognitive capture?"]},
+          "create_time": 1710200050.0
+        }
+      },
+      "node-6": {
+        "message": {
+          "author": {"role": "assistant"},
+          "content": {"parts": ["Yes, by intercepting the MCP message stream you can capture every cognitive interaction — tool calls, prompts, and responses — building a Universal Cognitive Wallet."]},
+          "create_time": 1710200060.0
+        }
+      }
+    }
+  }
+]
