@@ -262,77 +262,20 @@ async def _coherence_search(args: Dict) -> Dict:
             [text_content("Query is required.")], is_error=True
         )
 
-    try:
-        from ucw.server.embeddings import (
-            build_embed_text,
-            cosine_similarity,
-            embed_single,
-        )
-    except ImportError as exc:
-        return tool_result_content(
-            [text_content(
-                f"Embeddings not available: {exc}\n\n"
-                "Install with: pip install 'ucw[embeddings]'"
-            )], is_error=True,
-        )
+    # Use cached semantic search from ucw.search (embedding cache in SQLite)
+    # Falls back to FTS5 keyword search if embeddings unavailable
+    from ucw.search import search as ucw_search
+
+    db_path = _db._db_path
 
     try:
-        query_emb = embed_single(query)
+        results, method = ucw_search(
+            db_path, query, semantic=True, limit=limit,
+        )
     except Exception as exc:
         return tool_result_content(
-            [text_content(
-                f"Embedding model not available: {exc}\n\n"
-                "Install with: pip install 'ucw[embeddings]'"
-            )], is_error=True,
+            [text_content(f"Search error: {exc}")], is_error=True,
         )
-
-    conn = _db._conn
-    if not conn:
-        return tool_result_content(
-            [text_content(
-                "Database not initialized. The UCW server may still be "
-                "starting up — try again in a moment, or run "
-                "`ucw doctor` to diagnose."
-            )], is_error=True
-        )
-
-    cur = conn.execute(
-        """SELECT event_id, platform, light_topic, light_intent,
-                  light_summary, data_content, light_concepts,
-                  instinct_gut_signal, instinct_coherence
-           FROM cognitive_events
-           WHERE data_content IS NOT NULL AND length(data_content) > 10
-           ORDER BY timestamp_ns DESC LIMIT 5000"""
-    )
-    rows = cur.fetchall()
-
-    results = []
-    for row in rows:
-        (event_id, platform, topic, intent, summary,
-         content, concepts_json, gut, coherence) = row
-
-        light = {"intent": intent or "explore", "topic": topic or "general",
-                 "summary": summary or "", "concepts": _parse_json_list(concepts_json)}
-        data = {"content": content or ""}
-        text = build_embed_text({"light_layer": light, "data_layer": data})
-        if not text or len(text) < 10:
-            continue
-
-        event_emb = embed_single(text)
-        sim = cosine_similarity(query_emb, event_emb)
-        if sim >= 0.3:
-            results.append({
-                "event_id": event_id,
-                "platform": platform,
-                "topic": topic,
-                "intent": intent,
-                "summary": (summary or "")[:200],
-                "gut": gut,
-                "similarity": round(sim, 4),
-            })
-
-    results.sort(key=lambda r: r["similarity"], reverse=True)
-    results = results[:limit]
 
     if not results:
         return tool_result_content([text_content(
@@ -340,15 +283,17 @@ async def _coherence_search(args: Dict) -> Dict:
         )])
 
     out = f"# Semantic Search: '{query}'\n\n"
-    out += f"**Results:** {len(results)}\n\n"
+    out += f"**Method:** {method} | **Results:** {len(results)}\n\n"
 
     for r in results:
+        sim = r.get("similarity", r.get("score", 0))
         out += (
-            f"**{r['similarity']:.0%}** [{r['platform']}] "
-            f"topic=`{r['topic']}` intent=`{r['intent']}` "
-            f"gut={r['gut']}\n"
+            f"**{sim:.0%}** [{r.get('platform', '?')}] "
+            f"topic=`{r.get('topic', 'unknown')}`\n"
         )
-        out += f"> {r['summary']}\n\n"
+        summary = r.get("summary", r.get("snippet", ""))
+        if summary:
+            out += f"> {summary[:200]}\n\n"
 
     return tool_result_content([text_content(out)])
 
