@@ -116,7 +116,8 @@ class RawMCPServer:
             log.info(f"Database ready — session={self._db.session_id}")
 
         except Exception as exc:
-            log.error(f"Background DB init failed: {exc}", exc_info=True)
+            log.error(f"Database initialization failed: {exc}", exc_info=True)
+            log.error("Run `ucw doctor` to diagnose database issues")
 
     async def _ensure_db_ready(self):
         """Wait for DB to be ready (called before tool execution)."""
@@ -202,15 +203,24 @@ class RawMCPServer:
 
     def _inject_db(self):
         """Inject shared DB instance into tool modules that need it."""
-        try:
-            from ucw.tools import coherence_tools, ucw_tools
-            if hasattr(ucw_tools, 'set_db'):
-                ucw_tools.set_db(self._db)
-            if hasattr(coherence_tools, 'set_db'):
-                coherence_tools.set_db(self._db)
-            log.info("DB injected into tool modules")
-        except ImportError:
-            pass
+        from ucw.tools import (
+            agent_tools,
+            coherence_tools,
+            graph_tools,
+            intelligence_tools,
+            proof_tools,
+            temporal_tools,
+            ucw_tools,
+        )
+        modules = [
+            ucw_tools, coherence_tools, graph_tools,
+            intelligence_tools, agent_tools, temporal_tools,
+            proof_tools,
+        ]
+        for mod in modules:
+            if hasattr(mod, 'set_db'):
+                mod.set_db(self._db)
+        log.info(f"DB injected into {len(modules)} tool modules")
 
     async def shutdown(self):
         """Graceful shutdown — flush captures, close DB."""

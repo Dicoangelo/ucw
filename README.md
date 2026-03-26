@@ -1,66 +1,87 @@
 # UCW — Universal Cognitive Wallet
 
-Capture every AI conversation with perfect fidelity. Every byte. Every insight. Every pattern.
+> Your AI memory, unified. Every conversation captured. Every insight connected.
 
-UCW is an MCP server that sits between you and Claude, capturing every message with semantic enrichment. Each event gets three layers:
+## What UCW Does
 
-- **Data** — What was said (raw content, tokens, method)
-- **Light** — What it means (intent, topic, concepts, summary)
-- **Instinct** — What it signals (coherence potential, emergence indicators, gut signal)
+UCW captures and connects your conversations across AI tools — Claude, ChatGPT, Cursor, Grok. Instead of losing context when you switch tools, UCW remembers everything and finds the connections you'd miss.
 
-## Quickstart
+- **Capture everything** — Every AI conversation, automatically
+- **Search across tools** — Find that insight from last week, regardless of which AI you used
+- **See patterns** — Discover connections between conversations across platforms
+- **Own your data** — Everything stored locally in SQLite. No cloud. No subscriptions (yet).
+
+## Quick Start
 
 ```bash
-pip install ucw          # lightweight — only click dependency
-ucw init                 # creates ~/.ucw/
-ucw mcp-config           # prints JSON to add to Claude
+pip install ucw
+ucw init          # Set up UCW and detect your AI tools
+ucw demo          # Load sample data to explore
+ucw dashboard     # See your AI memory at a glance
 ```
 
-Add the output to your Claude settings, restart Claude, and every conversation is captured.
+## Connect to Claude
 
-For semantic search (`coherence_search`), install with embeddings:
+```bash
+ucw mcp-config    # Get the config JSON
+```
+
+Then paste into Claude Desktop (Settings > Developer > Edit Config) or Claude Code (`.claude/settings.json`).
+
+For semantic search across your conversations:
 
 ```bash
 pip install "ucw[embeddings]"   # adds sentence-transformers + numpy
 ```
 
+## Import Your History
+
+```bash
+ucw import chatgpt ~/Downloads/conversations.json
+ucw import cursor
+ucw import grok ~/Downloads/grok-export.json
+```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `ucw init` | Set up UCW and detect your AI tools |
+| `ucw server` | Start the MCP server (used by Claude) |
+| `ucw dashboard` | View your AI memory overview |
+| `ucw demo` | Load sample data to explore features |
+| `ucw import <platform>` | Import conversations from other AI tools |
+| `ucw status` | Quick database statistics |
+| `ucw doctor` | Check installation health |
+| `ucw repair` | Fix and optimize the database |
+| `ucw migrate` | Run database migrations |
+| `ucw mcp-config` | Print Claude MCP configuration |
+
+## 23 MCP Tools
+
+When connected to Claude, UCW provides 23 tools across 7 categories:
+
+- **Capture** — Stats, timeline, session context
+- **Coherence** — Search, status, moments, scan, arcs
+- **Intelligence** — Emergence detection, event stream, alerts
+- **Graph** — Knowledge graph queries, entity relationships
+- **Temporal** — Time-based analysis, pattern detection
+- **Agent** — Cross-agent memory, trust scoring
+- **Proof** — Cryptographic proof-of-cognition, hash chains, Merkle receipts
+
 ## How It Works
 
 ```
-You ←→ Claude Desktop/Code
-         ↕
+You <-> Claude Desktop/Code
+         |
     UCW MCP Server
-    ├── Transport    (raw STDIO, every byte)
-    ├── Protocol     (JSON-RPC 2.0 validation)
-    ├── Router       (method dispatch)
-    ├── Capture      (nanosecond timestamps, turn tracking)
-    ├── UCW Bridge   (Data/Light/Instinct enrichment)
-    └── SQLite DB    (persistent, WAL mode)
+    |-- Capture      (every message, nanosecond timestamps)
+    |-- Enrichment   (intent, topic, concepts, coherence signals)
+    |-- Storage      (SQLite, WAL mode, local-only)
+    '-- Tools        (23 MCP tools Claude can call)
 ```
 
-UCW runs as an MCP server. Claude sends messages over STDIO, UCW captures and enriches every one, then passes them through. Zero latency impact on the handshake — database and embeddings initialize in the background.
-
-## MCP Tools (8)
-
-| Tool | Description |
-|------|-------------|
-| `ucw_capture_stats` | Session + all-time capture statistics |
-| `ucw_timeline` | Chronological event timeline with filters |
-| `detect_emergence` | Scan for breakthrough signals and concept clusters |
-| `coherence_status` | Engine status: events, sessions, signals |
-| `coherence_moments` | High-coherence events with emergence indicators |
-| `coherence_search` | Semantic similarity search across all events |
-| `coherence_scan` | Pattern scan with topic/intent/signal breakdown |
-| `cross_platform_coherence` | Find coherence signatures across 2+ platforms |
-
-## CLI Commands
-
-```bash
-ucw init        # Create ~/.ucw/ and generate config
-ucw server      # Start MCP server (stdio mode)
-ucw status      # Show database stats
-ucw mcp-config  # Print Claude config JSON
-```
+UCW runs as an MCP server. Claude sends messages over STDIO, UCW captures and enriches every one, then passes them through. Zero latency impact — database and embeddings initialize in the background.
 
 ## Configuration
 
@@ -72,47 +93,12 @@ UCW stores data in `~/.ucw/` by default. Override with environment variables or 
 | `UCW_LOG_LEVEL` | `DEBUG` | Log level |
 | `UCW_PLATFORM` | `claude-desktop` | Platform identifier |
 
-## Architecture
+## Requirements
 
-```
-src/ucw/
-├── cli.py                 # Click CLI (init, server, status, mcp-config)
-├── config.py              # Unified configuration
-├── server/
-│   ├── server.py          # Main orchestrator
-│   ├── transport.py       # Raw STDIO transport
-│   ├── protocol.py        # JSON-RPC 2.0
-│   ├── router.py          # Method dispatch
-│   ├── capture.py         # Perfect capture engine
-│   ├── ucw_bridge.py      # Semantic layer extraction
-│   ├── embeddings.py      # SBERT embeddings
-│   └── logger.py          # File-only logging
-├── db/
-│   ├── sqlite.py          # SQLite storage (WAL mode)
-│   └── schema.sql         # PostgreSQL schema (v1.1)
-└── tools/
-    ├── ucw_tools.py       # 3 capture tools
-    └── coherence_tools.py # 5 coherence tools
-```
-
-## The Three Layers
-
-Every captured event is enriched with UCW semantic layers:
-
-**Data Layer** — The raw facts
-- Method, parameters, result content
-- Token estimates, byte counts
-
-**Light Layer** — The meaning
-- Intent classification (search, create, analyze, retrieve, execute)
-- Topic detection (ucw, database, ai_agents, research, coding, mcp_protocol)
-- Concept extraction
-- Content summary
-
-**Instinct Layer** — The signal
-- Coherence potential (0.0 - 1.0)
-- Emergence indicators (high_coherence_potential, concept_cluster, meta_cognitive)
-- Gut signal (routine, interesting, breakthrough_potential)
+- Python 3.10+
+- SQLite 3.35+
+- Optional: `pip install ucw[ui]` for rich dashboard
+- Optional: `pip install ucw[embeddings]` for semantic search
 
 ## Development
 
@@ -120,17 +106,9 @@ Every captured event is enriched with UCW semantic layers:
 git clone https://github.com/Dicoangelo/ucw.git
 cd ucw
 pip install -e ".[dev]"
-pytest               # 133 tests
-ruff check .         # 0 lint errors
+pytest               # run test suite
+ruff check .         # lint
 ```
-
-## Roadmap
-
-- **v0.1** — MCP server + 7 tools + SQLite + SBERT
-- **v0.2** — 8 tools, cross-platform coherence, lightweight install (this release)
-- **v0.3** — Cross-platform capture adapters (ChatGPT, Cursor, Grok)
-- **v0.4** — PostgreSQL backend with pgvector similarity search
-- **v1.0** — Full UCW with real-time coherence dashboard
 
 ## License
 

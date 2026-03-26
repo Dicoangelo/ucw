@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ucw"
-version = "0.2.0"
+version = "0.3.0"
 description = "Universal Cognitive Wallet — Cross-platform AI cognitive capture via MCP"
 readme = "README.md"
 license = "MIT"
@@ -21,6 +21,8 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
@@ -31,6 +33,14 @@ dependencies = [
 embeddings = [
     "sentence-transformers>=2.2.0",
     "numpy>=1.24.0",
+]
+ui = [
+    "rich>=13.0",
+]
+all = [
+    "sentence-transformers>=2.2.0",
+    "numpy>=1.24.0",
+    "rich>=13.0",
 ]
 dev = [
     "pytest>=7.0",

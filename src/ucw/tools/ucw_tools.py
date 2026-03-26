@@ -156,11 +156,11 @@ async def _ucw_timeline(args: Dict) -> Dict:
     limit = int(args.get("limit", 50))
 
     if not _db:
-        return tool_result_content([text_content("Database not initialized.")], is_error=True)
+        return tool_result_content([text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True)
 
     conn = _db._conn
     if not conn:
-        return tool_result_content([text_content("Database not initialized.")], is_error=True)
+        return tool_result_content([text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True)
 
     query = (
         "SELECT event_id, timestamp_ns, direction, method, platform, "
@@ -208,11 +208,11 @@ async def _detect_emergence(args: Dict) -> Dict:
     limit = int(args.get("limit", 100))
 
     if not _db:
-        return tool_result_content([text_content("Database not initialized.")], is_error=True)
+        return tool_result_content([text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True)
 
     conn = _db._conn
     if not conn:
-        return tool_result_content([text_content("Database not initialized.")], is_error=True)
+        return tool_result_content([text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True)
 
     cur = conn.execute(
         """SELECT event_id, timestamp_ns, method, platform,

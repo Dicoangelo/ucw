@@ -155,7 +155,7 @@ async def handle_tool(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
 async def _coherence_status(args: Dict) -> Dict:
     if not _db:
         return tool_result_content(
-            [text_content("Database not initialized.")], is_error=True
+            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
         )
 
     all_stats = await _db.get_all_stats()
@@ -187,7 +187,7 @@ async def _coherence_status(args: Dict) -> Dict:
 async def _coherence_moments(args: Dict) -> Dict:
     if not _db:
         return tool_result_content(
-            [text_content("Database not initialized.")], is_error=True
+            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
         )
 
     min_coherence = float(args.get("min_coherence", 0.5))
@@ -196,7 +196,7 @@ async def _coherence_moments(args: Dict) -> Dict:
     conn = _db._conn
     if not conn:
         return tool_result_content(
-            [text_content("Database not initialized.")], is_error=True
+            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
         )
 
     cur = conn.execute(
@@ -235,7 +235,7 @@ async def _coherence_moments(args: Dict) -> Dict:
 async def _coherence_search(args: Dict) -> Dict:
     if not _db:
         return tool_result_content(
-            [text_content("Database not initialized.")], is_error=True
+            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
         )
 
     query = args.get("query", "")
@@ -273,7 +273,7 @@ async def _coherence_search(args: Dict) -> Dict:
     conn = _db._conn
     if not conn:
         return tool_result_content(
-            [text_content("Database not initialized.")], is_error=True
+            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
         )
 
     cur = conn.execute(
@@ -336,7 +336,7 @@ async def _coherence_search(args: Dict) -> Dict:
 async def _coherence_scan(args: Dict) -> Dict:
     if not _db:
         return tool_result_content(
-            [text_content("Database not initialized.")], is_error=True
+            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
         )
 
     limit = int(args.get("limit", 200))
@@ -344,7 +344,7 @@ async def _coherence_scan(args: Dict) -> Dict:
     conn = _db._conn
     if not conn:
         return tool_result_content(
-            [text_content("Database not initialized.")], is_error=True
+            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
         )
 
     cur = conn.execute(
@@ -439,7 +439,7 @@ async def _cross_platform_coherence(args: Dict) -> Dict:
     """US-014: Find coherence signatures matching across 2+ platforms."""
     if not _db:
         return tool_result_content(
-            [text_content("Database not initialized.")], is_error=True
+            [text_content("Database not initialized. The UCW server may still be starting up — try again in a moment, or run `ucw doctor` to diagnose.")], is_error=True
         )
 
     min_platforms = int(args.get("min_platforms", 2))
