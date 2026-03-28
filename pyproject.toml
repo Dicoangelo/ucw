@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "Dicoangelo", email = "dicoangelo@users.noreply.github.com" },
+    { name = "Dico Angelo", email = "dicoangelo@metaventionsai.com" },
 ]
 keywords = ["mcp", "cognitive", "ai", "capture", "claude"]
 classifiers = [

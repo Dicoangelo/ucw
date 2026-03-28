@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-03-26
+### Added
+- Semantic search: `ucw search "query"` with FTS5 keyword + sentence-transformer embeddings
+- Embedding cache in SQLite (embed once, search forever) with `ucw index` management
+- Web dashboard: `ucw web` launches local SPA on port 7077 with dark/light themes
+- Dashboard features: search bar, platform breakdown, topic chips, knowledge graph visualization, coherence moments timeline, capture health monitoring
+- Capture verification: `ucw capture-test` validates full pipeline health
+- `ucw index --status` and `ucw index --rebuild` for embedding cache management
+- Database migrations: 006 (FTS5 virtual table), 007 (embedding cache)
+- Dashboard capture health: events 24h/7d, last capture age, active platforms
+- 4 new CLI commands (10 → 14 total)
+- Test coverage expanded from 469 to 565 tests
+
+### Changed
+- Coherence search now uses cached embeddings instead of brute-force re-embedding
+- Web server binds to 127.0.0.1 only (local access, no network exposure)
+- Auto port fallback: if 7077 is busy, tries up to port+10
+
 ## [0.3.0] - 2026-03-25
 ### Added
 - 15 new MCP tools across 5 modules (8 → 23 total):

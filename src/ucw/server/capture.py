@@ -175,6 +175,9 @@ class CaptureEngine:
                 await self._db_sink.store_event(event)
             except Exception as exc:
                 log.error(f"DB sink error: {exc}")
+            else:
+                # Real-time embedding (non-blocking, optional)
+                self._try_embed_event(event)
 
         # Notify callbacks
         for cb in self._event_callbacks:
@@ -187,6 +190,47 @@ class CaptureEngine:
             f"[{direction}] {event.method or 'response'} "
             f"turn={event.turn} bytes={event.content_length}"
         )
+
+    def _try_embed_event(self, event: CaptureEvent) -> None:
+        """Embed a newly stored event if ucw[embeddings] is installed.
+
+        Non-blocking: silently skips on ImportError or any failure.
+        Only attempts embedding when the embedding_cache table exists
+        (migration 007 applied).
+        """
+        try:
+            from ucw.search import embed_event  # noqa: F811
+        except ImportError:
+            return
+
+        if not self._db_sink or not hasattr(self._db_sink, "_db_path"):
+            return
+
+        light = event.light_layer or {}
+        data = event.data_layer or {}
+        content_dict = {
+            "light_layer": {
+                "intent": light.get("intent", ""),
+                "topic": light.get("topic", ""),
+                "summary": light.get("summary", ""),
+                "concepts": light.get("concepts", []),
+            },
+            "data_layer": {
+                "content": data.get("content", ""),
+            },
+        }
+
+        try:
+            ok = embed_event(
+                self._db_sink._db_path,
+                event.event_id,
+                content_dict,
+            )
+            if ok:
+                log.debug(f"Embedded event {event.event_id}")
+        except Exception:
+            # embedding_cache table missing or model unavailable — skip
+            pass
 
     @property
     def stats(self) -> Dict[str, int]:
