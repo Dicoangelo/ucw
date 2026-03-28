@@ -5,7 +5,7 @@ Commands:
     ucw init        Create ~/.ucw/ and generate config
     ucw server      Start the MCP server (stdio mode)
     ucw status      Show database stats
-    ucw mcp-config  Print Claude Desktop/Code JSON config
+    ucw mcp-config  Print Claude Desktop/Code/Cursor JSON config
 """
 
 import asyncio
@@ -197,10 +197,42 @@ def status():
 
 
 @main.command("mcp-config")
-def mcp_config():
-    """Print MCP config JSON for Claude Desktop or Claude Code."""
+@click.option("--cursor", is_flag=True, help="Output Cursor IDE MCP config")
+@click.option(
+    "--install-cursor", is_flag=True,
+    help="Write config to ~/.cursor/mcp.json (merges with existing)",
+)
+def mcp_config(cursor, install_cursor):
+    """Print MCP config JSON for Claude Desktop, Claude Code, or Cursor."""
     ucw_path = _find_ucw_executable()
 
+    if install_cursor:
+        _install_cursor_mcp_config(ucw_path)
+        return
+
+    if cursor:
+        cursor_config = {
+            "mcpServers": {
+                "ucw": {
+                    "command": ucw_path,
+                    "args": ["server"],
+                    "env": {},
+                }
+            }
+        }
+        click.echo("Add this to your Cursor MCP settings:\n")
+        click.echo(json.dumps(cursor_config, indent=2))
+        click.echo()
+        click.echo(
+            "Cursor: ~/.cursor/mcp.json or Settings > MCP"
+        )
+        click.echo(
+            "Or run `ucw mcp-config --install-cursor` "
+            "to install automatically."
+        )
+        return
+
+    # Default: show config for all supported clients
     config = {
         "mcpServers": {
             "ucw": {
@@ -215,6 +247,58 @@ def mcp_config():
     click.echo()
     click.echo("Claude Desktop: Settings > Developer > Edit Config")
     click.echo("Claude Code:    .claude/settings.json or ~/.claude/settings.json")
+
+    # Also show Cursor instructions
+    cursor_config = {
+        "mcpServers": {
+            "ucw": {
+                "command": ucw_path,
+                "args": ["server"],
+                "env": {},
+            }
+        }
+    }
+    click.echo()
+    click.echo("Cursor IDE (~/.cursor/mcp.json):\n")
+    click.echo(json.dumps(cursor_config, indent=2))
+    click.echo(
+        "\nOr run `ucw mcp-config --install-cursor` "
+        "to install automatically."
+    )
+
+
+def _install_cursor_mcp_config(ucw_path: str):
+    """Write UCW MCP config to ~/.cursor/mcp.json, merging if it exists."""
+    from pathlib import Path as _Path
+
+    cursor_dir = _Path.home() / ".cursor"
+    cursor_mcp = cursor_dir / "mcp.json"
+
+    ucw_entry = {
+        "command": ucw_path,
+        "args": ["server"],
+        "env": {},
+    }
+
+    if cursor_mcp.exists():
+        try:
+            existing = json.loads(cursor_mcp.read_text())
+        except (json.JSONDecodeError, OSError) as exc:
+            click.echo(f"[FAIL] Could not parse {cursor_mcp}: {exc}")
+            return
+        if not isinstance(existing, dict):
+            existing = {}
+        if "mcpServers" not in existing:
+            existing["mcpServers"] = {}
+        existing["mcpServers"]["ucw"] = ucw_entry
+        merged = existing
+    else:
+        cursor_dir.mkdir(parents=True, exist_ok=True)
+        merged = {"mcpServers": {"ucw": ucw_entry}}
+
+    cursor_mcp.write_text(json.dumps(merged, indent=2) + "\n")
+    click.echo(f"[OK] UCW MCP config written to {cursor_mcp}")
+    click.echo("Restart Cursor to activate the UCW server.")
 
 
 @main.command()
@@ -563,6 +647,18 @@ def capture_test():
         if claude_code.exists():
             found_mcp.append("Claude Code")
 
+        cursor_mcp = home / ".cursor" / "mcp.json"
+        if cursor_mcp.exists():
+            try:
+                cursor_data = json.loads(cursor_mcp.read_text())
+                if (
+                    isinstance(cursor_data, dict)
+                    and "ucw" in cursor_data.get("mcpServers", {})
+                ):
+                    found_mcp.append("Cursor")
+            except (json.JSONDecodeError, OSError):
+                pass
+
         if found_mcp:
             _pass(
                 f"MCP config: Found in {', '.join(found_mcp)}"
@@ -834,6 +930,120 @@ def web(port, host, no_open):
         server.serve_forever()
     except KeyboardInterrupt:
         click.echo("\nDashboard stopped.")
+
+
+@main.command()
+@click.option("--format", "fmt", type=click.Choice(["json", "csv", "markdown"]),
+              default="json", help="Output format (default json)")
+@click.option("--output", "output_path", default=None,
+              help="Output file path (default stdout)")
+@click.option("--platform", default=None, help="Filter by platform")
+@click.option("--after", default=None, help="After ISO date (YYYY-MM-DD)")
+@click.option("--before", default=None, help="Before ISO date (YYYY-MM-DD)")
+@click.option("--limit", default=None, type=int, help="Max events to export")
+def export(fmt, output_path, platform, after, before, limit):
+    """Export cognitive events as JSON, CSV, or Markdown."""
+    import csv
+    import io
+    import json as json_mod
+    import sqlite3 as _sqlite3
+    from datetime import datetime, timezone
+
+    db_path = Config.DB_PATH
+    if not db_path.exists():
+        click.echo("No database found. Run `ucw init` first.")
+        return
+
+    conn = _sqlite3.connect(str(db_path))
+    conn.row_factory = _sqlite3.Row
+    try:
+        query = "SELECT * FROM cognitive_events WHERE 1=1"
+        params: list = []
+
+        if platform:
+            query += " AND platform = ?"
+            params.append(platform)
+        if after:
+            dt = datetime.fromisoformat(after)
+            after_ns = int(dt.timestamp() * 10**9)
+            query += " AND timestamp_ns >= ?"
+            params.append(after_ns)
+        if before:
+            dt = datetime.fromisoformat(before)
+            before_ns = int(dt.timestamp() * 10**9)
+            query += " AND timestamp_ns <= ?"
+            params.append(before_ns)
+
+        query += " ORDER BY timestamp_ns ASC"
+
+        if limit is not None:
+            query += " LIMIT ?"
+            params.append(limit)
+
+        rows = conn.execute(query, params).fetchall()
+    finally:
+        conn.close()
+
+    if not rows:
+        click.echo("No events to export.")
+        return
+
+    def _ns_to_iso(ns):
+        """Convert nanosecond timestamp to ISO format string."""
+        if ns is None:
+            return None
+        return datetime.fromtimestamp(ns / 10**9, tz=timezone.utc).isoformat()
+
+    # Build output content
+    if fmt == "json":
+        events = []
+        for row in rows:
+            d = dict(row)
+            d["timestamp_iso"] = _ns_to_iso(d.get("timestamp_ns"))
+            events.append(d)
+        content = json_mod.dumps(events, indent=2, default=str)
+
+    elif fmt == "csv":
+        csv_fields = [
+            "event_id", "timestamp_ns", "platform", "light_topic",
+            "light_summary", "instinct_gut_signal", "content_length",
+        ]
+        buf = io.StringIO()
+        writer = csv.DictWriter(buf, fieldnames=csv_fields, extrasaction="ignore")
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(dict(row))
+        content = buf.getvalue()
+
+    elif fmt == "markdown":
+        parts = [f"# UCW Export — {len(rows):,} events\n"]
+        for row in rows:
+            d = dict(row)
+            ts = _ns_to_iso(d.get("timestamp_ns")) or "unknown"
+            plat = d.get("platform") or "unknown"
+            topic = d.get("light_topic") or "untitled"
+            summary = d.get("light_summary") or ""
+            gut = d.get("instinct_gut_signal") or ""
+            parts.append(f"## {topic}")
+            parts.append(f"**Time:** {ts}  ")
+            parts.append(f"**Platform:** {plat}  ")
+            if gut:
+                parts.append(f"**Signal:** {gut}  ")
+            if summary:
+                parts.append(f"\n{summary}")
+            parts.append("")
+        content = "\n".join(parts)
+
+    # Output
+    if output_path:
+        with open(output_path, "w") as f:
+            f.write(content)
+        click.echo(
+            f"Exported {len(rows):,} events to {output_path}",
+            err=True,
+        )
+    else:
+        click.echo(content)
 
 
 def _find_ucw_executable() -> str:

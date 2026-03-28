@@ -550,6 +550,30 @@ body {
     }, 300);
   });
 
+  // Instant search on Enter
+  searchInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+      clearTimeout(searchTimer);
+      var q = searchInput.value.trim();
+      if (!q) return;
+      api("/api/search?q=" + encodeURIComponent(q) + "&limit=10").then(function(data) {
+        var results = data.results || [];
+        if (results.length === 0) {
+          searchResults.innerHTML = '<div class="search-no-results">No results for "' + q + '"</div>';
+        } else {
+          searchResults.innerHTML = results.map(function(r) {
+            return '<div class="search-result-item">' +
+              '<div class="search-result-topic">' + (r.topic || r.event_id || "event") + '</div>' +
+              '<div class="search-result-summary">' + (r.summary || r.snippet || "") + '</div>' +
+              '<div class="search-result-meta">' + (r.platform || "") + ' &middot; ' + fmtAge(r.timestamp_ns) + '</div>' +
+            '</div>';
+          }).join("");
+        }
+        searchResults.classList.add("active");
+      });
+    }
+  });
+
   // Close search on click outside
   document.addEventListener("click", function(e) {
     if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {

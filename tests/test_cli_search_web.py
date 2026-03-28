@@ -157,3 +157,105 @@ class TestWebCLI:
         assert "--port" in result.output
         assert "--host" in result.output
         assert "--no-open" in result.output
+
+
+# ── Export CLI Tests ─────────────────────────────────
+
+
+@pytest.fixture
+def export_ready_db(tmp_ucw_dir):
+    """DB with schema + sample events for export tests."""
+    import time
+
+    db_path = tmp_ucw_dir / "cognitive.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.executescript(SCHEMA_SQL)
+
+    now = time.time_ns()
+    events = [
+        ("evt-e01", now - 3_000_000_000, "claude-desktop",
+         "architecture", "Designing UCW layers", "high-signal", 1200),
+        ("evt-e02", now - 2_000_000_000, "cursor",
+         "debugging", "Fixing import cycle", "neutral", 800),
+        ("evt-e03", now - 1_000_000_000, "claude-desktop",
+         "testing", "Writing pytest fixtures", "high-signal", 950),
+    ]
+
+    for eid, ts, plat, topic, summary, gut, clen in events:
+        conn.execute(
+            "INSERT INTO cognitive_events ("
+            "  event_id, timestamp_ns, direction, stage,"
+            "  light_topic, light_summary, instinct_gut_signal,"
+            "  content_length, platform"
+            ") VALUES (?, ?, 'inbound', 'captured',"
+            "  ?, ?, ?, ?, ?)",
+            (eid, ts, topic, summary, gut, clen, plat),
+        )
+    conn.commit()
+    conn.close()
+    return db_path
+
+
+class TestExportCLI:
+    def test_export_json_default(self, runner, export_ready_db):
+        result = runner.invoke(main, ["export"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert isinstance(data, list)
+        assert len(data) == 3
+        assert "event_id" in data[0]
+        assert "timestamp_iso" in data[0]
+        # Verify ISO timestamp was added
+        assert data[0]["timestamp_iso"] is not None
+
+    def test_export_csv(self, runner, export_ready_db):
+        result = runner.invoke(main, ["export", "--format", "csv"])
+        assert result.exit_code == 0
+        lines = result.output.strip().split("\n")
+        assert len(lines) == 4  # header + 3 rows
+        header = lines[0]
+        assert "event_id" in header
+        assert "platform" in header
+        assert "light_topic" in header
+
+    def test_export_markdown(self, runner, export_ready_db):
+        result = runner.invoke(main, ["export", "--format", "markdown"])
+        assert result.exit_code == 0
+        assert "# UCW Export" in result.output
+        assert "## architecture" in result.output
+        assert "## debugging" in result.output
+        assert "**Platform:**" in result.output
+
+    def test_export_platform_filter(self, runner, export_ready_db):
+        result = runner.invoke(
+            main, ["export", "--platform", "cursor", "--format", "json"]
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert len(data) == 1
+        assert data[0]["platform"] == "cursor"
+
+    def test_export_to_file(self, runner, export_ready_db, tmp_path):
+        out_file = str(tmp_path / "export.json")
+        result = runner.invoke(main, ["export", "--output", out_file])
+        assert result.exit_code == 0
+        # Count message goes to stderr
+        assert "Exported 3 events" in result.output
+        # Verify file was written
+        import json as json_mod
+        with open(out_file) as f:
+            data = json_mod.load(f)
+        assert len(data) == 3
+
+    def test_export_no_data(self, runner, tmp_ucw_dir):
+        """Export with empty DB returns 'No events to export.'"""
+        db_path = tmp_ucw_dir / "cognitive.db"
+        conn = sqlite3.connect(str(db_path))
+        conn.executescript(SCHEMA_SQL)
+        conn.commit()
+        conn.close()
+
+        result = runner.invoke(main, ["export"])
+        assert result.exit_code == 0
+        assert "No events to export." in result.output
