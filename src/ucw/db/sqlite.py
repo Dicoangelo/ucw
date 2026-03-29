@@ -54,6 +54,9 @@ CREATE TABLE IF NOT EXISTS cognitive_events (
     platform        TEXT DEFAULT 'claude-desktop',
     protocol        TEXT DEFAULT 'mcp',
 
+    -- Noise classification (migration 008)
+    is_noise        INTEGER DEFAULT 0,
+
     created_at      TEXT DEFAULT (datetime('now'))
 );
 
@@ -151,10 +154,10 @@ class CaptureDB:
                     data_content, data_tokens_est,
                     light_intent, light_topic, light_concepts, light_summary,
                     instinct_coherence, instinct_indicators, instinct_gut_signal,
-                    coherence_sig, platform, protocol
+                    coherence_sig, platform, protocol, is_noise
                 ) VALUES (
                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )""",
                 (
                     event.event_id,
@@ -182,6 +185,7 @@ class CaptureDB:
                     event.coherence_signature,
                     Config.PLATFORM,
                     Config.PROTOCOL,
+                    1 if data.get("is_noise", False) else 0,
                 ),
             )
             self._conn.commit()

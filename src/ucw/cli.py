@@ -156,6 +156,15 @@ def status():
         cur = conn.execute("SELECT COUNT(*) FROM cognitive_events")
         total_events = cur.fetchone()[0]
 
+        # Signal vs noise breakdown (backwards-compatible)
+        try:
+            noise_count = conn.execute(
+                "SELECT COUNT(*) FROM cognitive_events WHERE is_noise = 1"
+            ).fetchone()[0]
+        except Exception:
+            noise_count = 0
+        signal_count = total_events - noise_count
+
         cur = conn.execute("SELECT COUNT(*) FROM sessions")
         total_sessions = cur.fetchone()[0]
 
@@ -181,6 +190,7 @@ def status():
     click.echo("UCW Status")
     click.echo("=" * 40)
     click.echo(f"Events:   {total_events:,}")
+    click.echo(f"  Signal: {signal_count:,} | Noise: {noise_count:,}")
     click.echo(f"Sessions: {total_sessions}")
     click.echo(f"Bytes:    {total_bytes:,}")
     click.echo()

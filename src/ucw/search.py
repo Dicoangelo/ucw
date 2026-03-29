@@ -51,6 +51,22 @@ def _connect(db_path: Path) -> sqlite3.Connection:
     return conn
 
 
+def _has_noise_column(conn: sqlite3.Connection) -> bool:
+    """Check if the is_noise column exists (migration 008)."""
+    try:
+        conn.execute("SELECT is_noise FROM cognitive_events LIMIT 1")
+        return True
+    except sqlite3.OperationalError:
+        return False
+
+
+def _noise_filter(conn: sqlite3.Connection, alias: str = "ce") -> str:
+    """Return SQL fragment to exclude noise, or empty string if column missing."""
+    if _has_noise_column(conn):
+        return f" AND ({alias}.is_noise IS NULL OR {alias}.is_noise = 0)"
+    return ""
+
+
 def _has_fts5(conn: sqlite3.Connection) -> bool:
     """Check if the FTS5 virtual table exists."""
     cur = conn.execute(
@@ -122,6 +138,7 @@ def _fts5_search(
     filter_sql, filter_params = _build_filters(
         platform, after, before
     )
+    nf = _noise_filter(conn)
 
     sql = (
         "SELECT ce.event_id, ce.platform, ce.timestamp_ns,"
@@ -133,6 +150,7 @@ def _fts5_search(
         " JOIN cognitive_events ce"
         " ON fts.event_id = ce.event_id"
         " WHERE fts.cognitive_events_fts MATCH ?"
+        f"{nf}"
         f"{filter_sql}"
         " ORDER BY score"
         " LIMIT ?"
@@ -173,6 +191,7 @@ def _like_search(
         platform, after, before
     )
     like_param = f"%{query}%"
+    nf = _noise_filter(conn)
 
     sql = (
         "SELECT ce.event_id, ce.platform, ce.timestamp_ns,"
@@ -185,6 +204,7 @@ def _like_search(
         "   OR ce.light_summary LIKE ?"
         "   OR ce.light_topic LIKE ?"
         " )"
+        f"{nf}"
         f"{filter_sql}"
         " ORDER BY ce.timestamp_ns DESC"
         " LIMIT ?"
@@ -361,6 +381,7 @@ def semantic_search(
         filter_sql, filter_params = _build_filters(
             platform, after, before
         )
+        nf = _noise_filter(conn)
 
         sql = (
             "SELECT ec.event_id, ec.embedding,"
@@ -371,6 +392,7 @@ def semantic_search(
             " JOIN cognitive_events ce"
             " ON ec.event_id = ce.event_id"
             " WHERE 1=1"
+            f"{nf}"
             f"{filter_sql}"
         )
         cur = conn.execute(sql, filter_params)
@@ -456,3 +478,29 @@ def search(
 
     results = keyword_search(db_path, query, **kwargs)
     return results, "keyword"
+
+
+def backfill_noise_flags(db_path: Path) -> int:
+    """Backfill is_noise flags on existing events.
+
+    Returns the number of rows updated.
+    """
+    conn = _connect(db_path)
+    try:
+        cur = conn.execute("""
+            UPDATE cognitive_events SET is_noise = 1
+            WHERE is_noise = 0
+              AND (
+                method IN (
+                    'initialize', 'initialized',
+                    'notifications/initialized',
+                    'tools/list', 'resources/list'
+                )
+                OR (method = '' AND data_content LIKE '%inputSchema%')
+              )
+        """)
+        updated = cur.rowcount
+        conn.commit()
+        return updated
+    finally:
+        conn.close()

@@ -17,22 +17,32 @@ def get_dashboard_data(db_path=None):
     conn = sqlite3.connect(str(db_path))
     data = {}
     try:
-        # Total events
+        # Noise filter — only apply if the column exists (migration 008)
+        try:
+            conn.execute(
+                "SELECT is_noise FROM cognitive_events LIMIT 1"
+            )
+            _nf = " AND (is_noise IS NULL OR is_noise = 0)"
+        except sqlite3.OperationalError:
+            _nf = ""
+
+        # Total events (signal only)
         data['total_events'] = conn.execute(
-            "SELECT COUNT(*) FROM cognitive_events"
+            "SELECT COUNT(*) FROM cognitive_events WHERE 1=1" + _nf
         ).fetchone()[0]
 
-        # Events by platform
+        # Events by platform (signal only)
         rows = conn.execute(
             "SELECT platform, COUNT(*) FROM cognitive_events "
+            "WHERE 1=1" + _nf + " "
             "GROUP BY platform ORDER BY COUNT(*) DESC"
         ).fetchall()
         data['platforms'] = {r[0] or 'unknown': r[1] for r in rows}
 
-        # Top topics
+        # Top topics (signal only)
         rows = conn.execute(
             "SELECT light_topic, COUNT(*) FROM cognitive_events "
-            "WHERE light_topic IS NOT NULL "
+            "WHERE light_topic IS NOT NULL" + _nf + " "
             "GROUP BY light_topic ORDER BY COUNT(*) DESC LIMIT 10"
         ).fetchall()
         data['top_topics'] = [(r[0], r[1]) for r in rows]
@@ -56,9 +66,10 @@ def get_dashboard_data(db_path=None):
         except sqlite3.OperationalError:
             data['graph'] = {'entities': 0, 'relationships': 0}
 
-        # Total bytes
+        # Total bytes (signal only)
         data['total_bytes'] = conn.execute(
-            "SELECT COALESCE(SUM(content_length), 0) FROM cognitive_events"
+            "SELECT COALESCE(SUM(content_length), 0) FROM cognitive_events "
+            "WHERE 1=1" + _nf
         ).fetchone()[0]
 
         # Session count
@@ -72,10 +83,10 @@ def get_dashboard_data(db_path=None):
         ).fetchall()
         data['date_range'] = (rows[0][0], rows[0][1]) if rows and rows[0][0] else (None, None)
 
-        # Gut signals distribution
+        # Gut signals distribution (signal only)
         rows = conn.execute(
             "SELECT instinct_gut_signal, COUNT(*) FROM cognitive_events "
-            "WHERE instinct_gut_signal IS NOT NULL "
+            "WHERE instinct_gut_signal IS NOT NULL" + _nf + " "
             "GROUP BY instinct_gut_signal ORDER BY COUNT(*) DESC"
         ).fetchall()
         data['gut_signals'] = [(r[0], r[1]) for r in rows]
@@ -88,18 +99,19 @@ def get_dashboard_data(db_path=None):
 
         events_24h = conn.execute(
             "SELECT COUNT(*) FROM cognitive_events "
-            "WHERE timestamp_ns > ?",
+            "WHERE timestamp_ns > ?" + _nf,
             (now_ns - day_ns,),
         ).fetchone()[0]
 
         events_7d = conn.execute(
             "SELECT COUNT(*) FROM cognitive_events "
-            "WHERE timestamp_ns > ?",
+            "WHERE timestamp_ns > ?" + _nf,
             (now_ns - week_ns,),
         ).fetchone()[0]
 
         last_event = conn.execute(
-            "SELECT MAX(timestamp_ns) FROM cognitive_events"
+            "SELECT MAX(timestamp_ns) FROM cognitive_events "
+            "WHERE 1=1" + _nf
         ).fetchone()[0]
 
         last_age = (
@@ -109,7 +121,7 @@ def get_dashboard_data(db_path=None):
 
         active_platforms = conn.execute(
             "SELECT DISTINCT platform FROM cognitive_events "
-            "WHERE timestamp_ns > ?",
+            "WHERE timestamp_ns > ?" + _nf,
             (now_ns - week_ns,),
         ).fetchall()
 
