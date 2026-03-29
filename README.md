@@ -19,7 +19,12 @@
 
 ## What Is This?
 
-UCW captures and connects your conversations across AI tools — Claude, ChatGPT, Cursor, Grok. Instead of losing context when you switch platforms, UCW **remembers everything and finds the connections you'd miss**. All data stays local in SQLite. No cloud. No subscriptions.
+UCW is a local AI memory system. It **captures tool interactions** from Claude via MCP, **imports conversation history** from ChatGPT, Cursor, and Grok, and lets you **search, visualize, and export** everything from one place. All data stays in SQLite on your machine. No cloud. No subscriptions.
+
+**How it captures data:**
+- **Live capture (MCP):** UCW runs as an MCP server. When Claude calls UCW tools, those interactions are captured with nanosecond timestamps and semantic enrichment. Protocol noise is automatically filtered out.
+- **Import:** `ucw import chatgpt/cursor/grok` brings in your full conversation history from exported files — this is where the bulk of searchable content comes from.
+- **Combined search:** Once imported, `ucw search` finds conversations across all platforms in one query.
 
 <img src="https://user-images.githubusercontent.com/74038190/212284115-f47cd8ff-2ffb-4b04-b5bf-4d1c14c0247f.gif" width="100%"/>
 
@@ -52,8 +57,8 @@ flowchart TB
         Tools["23 MCP Tools<br/>Claude can call"]
     end
 
-    Claude -->|live capture| MCP
-    Cursor -->|live capture| MCP
+    Claude -->|MCP tool calls| MCP
+    Cursor -->|import| DB
     ChatGPT -->|import| DB
     Grok -->|import| DB
     MCP --> Capture --> Enrich --> DB
@@ -116,10 +121,10 @@ ucw/
 <code>FTS5</code> <code>BM25</code> <code>cosine similarity</code>
 </td>
 <td width="33%" align="center">
-<h3>Live Capture</h3>
-<b>Every message, automatically</b>
-<p>MCP server captures every Claude conversation in real-time. Nanosecond timestamps, intent detection, topic extraction, coherence signals.</p>
-<code>MCP</code> <code>stdio</code> <code>zero-latency</code>
+<h3>MCP Capture + Import</h3>
+<b>Tool calls live, history imported</b>
+<p>MCP server captures Claude tool interactions in real-time. Import full conversation history from ChatGPT, Cursor, and Grok exports. Protocol noise auto-filtered.</p>
+<code>MCP</code> <code>import</code> <code>noise-filtered</code>
 </td>
 <td width="33%" align="center">
 <h3>Web Dashboard</h3>

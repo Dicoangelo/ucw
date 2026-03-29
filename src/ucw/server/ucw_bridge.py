@@ -18,6 +18,11 @@ _DOMAIN_KEYWORDS = {
     "ai_agents": ["agent", "multi-agent", "orchestrat", "coordinat"],
     "research": ["research", "paper", "arxiv", "finding", "hypothesis"],
     "coding": ["function", "class", "import", "variable", "refactor", "debug"],
+    "authentication": ["auth", "login", "password", "token", "jwt", "session", "oauth"],
+    "deployment": ["deploy", "ci", "cd", "pipeline", "docker", "kubernetes", "vercel"],
+    "frontend": ["react", "component", "css", "html", "ui", "ux", "tailwind", "vite"],
+    "backend": ["api", "endpoint", "server", "route", "middleware", "express", "fastapi"],
+    "testing": ["test", "assert", "mock", "fixture", "coverage", "pytest", "jest"],
 }
 
 _INTENT_SIGNALS = {
@@ -44,6 +49,36 @@ def coherence_signature(intent: str, topic: str, timestamp_ns: int, content: str
     return hashlib.sha256(blob.encode()).hexdigest()
 
 
+_NOISE_METHODS = frozenset({
+    "initialize",
+    "initialized",
+    "notifications/initialized",
+    "tools/list",
+    "resources/list",
+})
+
+
+def _is_noise(method: str, direction: str, content: str, msg: Dict) -> bool:
+    """Return True if this event is MCP protocol noise, not user content."""
+    # Errors are always signal
+    if "error" in msg:
+        return False
+    # Known noise methods
+    if method in _NOISE_METHODS:
+        return True
+    # Real content methods
+    if method in ("tools/call", "resources/read"):
+        return False
+    # Outbound responses that are just tool schema listings
+    if not method and direction == "out":
+        c = content.strip()
+        if c.startswith("{'tools':") or c.startswith('{"tools":'):
+            return True
+        if "inputSchema" in c:
+            return True
+    return False
+
+
 def _data_layer(msg: Dict, direction: str) -> Dict:
     method = msg.get("method", "")
     params = msg.get("params", {})
@@ -66,8 +101,25 @@ def _data_layer(msg: Dict, direction: str) -> Dict:
             content = " ".join(
                 p.get("text", "")[:500] for p in parts if isinstance(p, dict)
             )[:2000]
+        elif isinstance(result, dict) and "tools" in result:
+            tool_names = [
+                t.get("name", "")
+                for t in result.get("tools", [])
+                if isinstance(t, dict)
+            ]
+            content = f"Tool listing: {', '.join(tool_names[:20])}"
+        elif isinstance(result, dict) and "resources" in result:
+            uris = [
+                r.get("uri", "")
+                for r in result.get("resources", [])
+                if isinstance(r, dict)
+            ]
+            content = f"Resource listing: {', '.join(uris[:20])}"
         else:
             content = str(result)[:2000]
+
+    # Classify noise vs signal
+    is_noise = _is_noise(method, direction, content, msg)
 
     return {
         "method": method,
@@ -75,6 +127,7 @@ def _data_layer(msg: Dict, direction: str) -> Dict:
         "result": result,
         "content": content,
         "tokens_est": max(1, len(content) // 4),
+        "is_noise": is_noise,
     }
 
 
@@ -140,5 +193,7 @@ def _extract_concepts(text: str) -> List[str]:
         "mcp", "ucw", "database", "schema", "coherence", "protocol",
         "cognitive", "semantic", "embedding", "sovereign", "platform",
         "research", "session", "capture", "agent", "orchestrat",
+        "api", "auth", "deploy", "test", "react", "component", "route",
+        "migration", "webhook", "pipeline", "docker", "typescript",
     ]
     return [t for t in targets if t in text]
