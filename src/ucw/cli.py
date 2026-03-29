@@ -908,6 +908,115 @@ def index(status, rebuild):
 
 
 @main.command()
+@click.option("--status", is_flag=True, help="Show enrichment status")
+@click.option("--force", is_flag=True, help="Re-enrich all events (not just broken ones)")
+def enrich(status, force):
+    """Re-enrich events with smart topic, intent, and summary extraction."""
+    import sqlite3 as _sqlite3
+
+    from ucw.enrichment import enrich_event
+
+    db_path = Config.DB_PATH
+    if not db_path.exists():
+        click.echo("No database found. Run `ucw init` first.")
+        return
+
+    conn = _sqlite3.connect(str(db_path))
+    conn.row_factory = _sqlite3.Row
+
+    if status:
+        total = conn.execute(
+            "SELECT COUNT(*) FROM cognitive_events WHERE is_noise = 0 OR is_noise IS NULL"
+        ).fetchone()[0]
+        topics = conn.execute(
+            "SELECT light_topic, COUNT(*) as c FROM cognitive_events "
+            "WHERE is_noise = 0 OR is_noise IS NULL "
+            "GROUP BY light_topic ORDER BY c DESC LIMIT 15"
+        ).fetchall()
+
+        click.echo(f"Total signal events: {total:,}")
+        click.echo(f"Distinct topics: {len(topics)}")
+        click.echo()
+        for row in topics:
+            pct = row[1] * 100 // total if total else 0
+            click.echo(f"  {row[0]}: {row[1]:,} ({pct}%)")
+
+        conn.close()
+        return
+
+    # Determine which events to re-enrich
+    if force:
+        where = "WHERE (is_noise = 0 OR is_noise IS NULL)"
+    else:
+        where = (
+            "WHERE (is_noise = 0 OR is_noise IS NULL) "
+            "AND (light_topic IN ('coding', 'general') OR light_topic IS NULL)"
+        )
+
+    total = conn.execute(
+        f"SELECT COUNT(*) FROM cognitive_events {where}"
+    ).fetchone()[0]
+
+    if total == 0:
+        click.echo("All events already enriched.")
+        conn.close()
+        return
+
+    click.echo(f"Enriching {total:,} events...")
+
+    batch_size = 1000
+    processed = 0
+
+    rows = conn.execute(
+        f"SELECT event_id, data_content, session_id "
+        f"FROM cognitive_events {where}"
+    ).fetchall()
+
+    for row in rows:
+        event_id = row["event_id"]
+        content = row["data_content"] or ""
+        session_id = row["session_id"] or ""
+
+        enriched = enrich_event(content, {"session_id": session_id})
+
+        conn.execute(
+            "UPDATE cognitive_events SET "
+            "light_topic = ?, light_intent = ?, "
+            "light_summary = ?, light_concepts = ? "
+            "WHERE event_id = ?",
+            (
+                enriched["topic"],
+                enriched["intent"],
+                enriched["summary"],
+                str(enriched["concepts"]),
+                event_id,
+            ),
+        )
+
+        processed += 1
+        if processed % batch_size == 0:
+            conn.commit()
+            pct = processed * 100 // total
+            click.echo(f"  {processed:,}/{total:,} ({pct}%)...")
+
+    conn.commit()
+    conn.close()
+    click.echo(f"Enriched {processed:,} events.")
+
+    # Show new topic distribution
+    conn2 = _sqlite3.connect(str(db_path))
+    topics = conn2.execute(
+        "SELECT light_topic, COUNT(*) as c FROM cognitive_events "
+        "WHERE is_noise = 0 OR is_noise IS NULL "
+        "GROUP BY light_topic ORDER BY c DESC LIMIT 10"
+    ).fetchall()
+    click.echo("\nTopic distribution:")
+    for t, c in topics:
+        click.echo(f"  {t}: {c:,}")
+    conn2.close()
+
+
+@main.command()
 @click.option("--port", default=7077, help="Port (default 7077)")
 @click.option("--host", default="127.0.0.1", help="Host (default 127.0.0.1)")
 @click.option("--no-open", is_flag=True, help="Don't open browser")
