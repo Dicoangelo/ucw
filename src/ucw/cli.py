@@ -563,6 +563,16 @@ def grok(filepath):
     importer.run(filepath)
 
 
+@import_cmd.command("claude-code")
+@click.argument("filepath", required=False, type=click.Path(exists=True))
+def claude_code(filepath):
+    """Import Claude Code sessions from ~/.claude/projects/."""
+    from ucw.importers.claude_code import ClaudeCodeImporter
+
+    importer = ClaudeCodeImporter()
+    importer.run(filepath)
+
+
 @main.command("capture-test")
 def capture_test():
     """Check if UCW is actively capturing your AI conversations."""
