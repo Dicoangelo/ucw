@@ -102,6 +102,8 @@ class _RequestHandler(BaseHTTPRequestHandler):
             "/api/dashboard": self._handle_dashboard,
             "/api/search": self._handle_search,
             "/api/events": self._handle_events,
+            "/api/activity": self._handle_activity,
+            "/api/topics": self._handle_topics,
             "/api/health": self._handle_health,
             "/api/graph": self._handle_graph,
             "/api/moments": self._handle_moments,
@@ -196,6 +198,67 @@ class _RequestHandler(BaseHTTPRequestHandler):
                 "limit": limit,
                 "offset": offset,
             })
+        except Exception as exc:
+            _json_response(self, {"error": str(exc)}, status=500)
+        finally:
+            conn.close()
+
+    def _handle_activity(self, params):
+        """Return daily event counts for a heatmap."""
+        days = int(params.get("days", ["30"])[0])
+        db_path = _get_db_path()
+        if not Path(db_path).exists():
+            _json_response(self, {"days": []})
+            return
+
+        conn = sqlite3.connect(str(db_path))
+        try:
+            rows = conn.execute(
+                "SELECT date(timestamp_ns/1000000000, 'unixepoch') as d, "
+                "COUNT(*) as c FROM cognitive_events "
+                "WHERE is_noise=0 OR is_noise IS NULL "
+                "GROUP BY d ORDER BY d DESC LIMIT ?",
+                (days,),
+            ).fetchall()
+            result = [{"date": r[0], "count": r[1]} for r in rows]
+            _json_response(self, {"days": result})
+        except Exception as exc:
+            _json_response(self, {"error": str(exc)}, status=500)
+        finally:
+            conn.close()
+
+    def _handle_topics(self, params):
+        """Return topic counts per day for trend chart."""
+        days = int(params.get("days", ["30"])[0])
+        db_path = _get_db_path()
+        if not Path(db_path).exists():
+            _json_response(self, {"topics": {}})
+            return
+
+        conn = sqlite3.connect(str(db_path))
+        try:
+            # Get top 8 topics
+            top = conn.execute(
+                "SELECT light_topic, COUNT(*) as c FROM cognitive_events "
+                "WHERE light_topic IS NOT NULL "
+                "AND (is_noise=0 OR is_noise IS NULL) "
+                "GROUP BY light_topic ORDER BY c DESC LIMIT 8",
+            ).fetchall()
+            topic_names = [r[0] for r in top]
+
+            topics = {}
+            for name in topic_names:
+                rows = conn.execute(
+                    "SELECT date(timestamp_ns/1000000000, 'unixepoch') as d, "
+                    "COUNT(*) as c FROM cognitive_events "
+                    "WHERE light_topic = ? "
+                    "AND (is_noise=0 OR is_noise IS NULL) "
+                    "GROUP BY d ORDER BY d DESC LIMIT ?",
+                    (name, days),
+                ).fetchall()
+                topics[name] = [{"date": r[0], "count": r[1]} for r in rows]
+
+            _json_response(self, {"topics": topics})
         except Exception as exc:
             _json_response(self, {"error": str(exc)}, status=500)
         finally:
