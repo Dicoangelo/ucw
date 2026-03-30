@@ -363,6 +363,51 @@ class TestMomentsEndpointAdvanced:
         assert len(data) <= 1
 
 
+class TestActivityEndpoint:
+    def test_activity_endpoint(self, web_server):
+        status, headers, data = _get(f"{web_server}/api/activity?days=30")
+        assert status == 200
+        assert "days" in data
+        assert isinstance(data["days"], list)
+        if len(data["days"]) > 0:
+            day = data["days"][0]
+            assert "date" in day
+            assert "count" in day
+            assert isinstance(day["count"], int)
+
+    def test_activity_default_days(self, web_server):
+        status, headers, data = _get(f"{web_server}/api/activity")
+        assert status == 200
+        assert "days" in data
+
+
+class TestTopicsEndpoint:
+    def test_topics_endpoint(self, web_server):
+        status, headers, data = _get(f"{web_server}/api/topics?days=30")
+        assert status == 200
+        assert "topics" in data
+        assert isinstance(data["topics"], dict)
+
+    def test_topics_default_days(self, web_server):
+        status, headers, data = _get(f"{web_server}/api/topics")
+        assert status == 200
+        assert "topics" in data
+
+
+class TestDashboardProjects:
+    def test_dashboard_projects(self, web_server):
+        status, headers, data = _get(f"{web_server}/api/dashboard")
+        assert status == 200
+        assert "projects" in data
+        assert isinstance(data["projects"], list)
+        if len(data["projects"]) > 0:
+            proj = data["projects"][0]
+            assert "name" in proj
+            assert "count" in proj
+            assert "last_active_ns" in proj
+            assert "pct" in proj
+
+
 class TestWebServerNoDatabase:
     def test_events_no_db(self, tmp_path):
         """Events endpoint with missing DB returns empty."""

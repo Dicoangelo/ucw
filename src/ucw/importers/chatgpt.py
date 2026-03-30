@@ -84,9 +84,23 @@ class ChatGPTImporter(BaseImporter):
                         self.skipped += 1
                         continue
 
-                    enrichment = self.enrich_light(content)
-                    light = enrichment["light"]
-                    instinct = enrichment["instinct"]
+                    # Use smart enrichment if available
+                    try:
+                        from ucw.enrichment import enrich_event
+                        enriched = enrich_event(content, {"title": title})
+                        light_topic = enriched["topic"]
+                        light_intent = enriched["intent"]
+                        light_concepts = json.dumps(enriched["concepts"])
+                    except ImportError:
+                        enrichment = self.enrich_light(content)
+                        light = enrichment["light"]
+                        light_topic = light.get("topic")
+                        light_intent = light.get("intent")
+                        light_concepts = json.dumps(
+                            light.get("concepts", [])
+                        )
+
+                    instinct_data = self.enrich_light(content)["instinct"]
 
                     self.insert_event(conn, {
                         "event_id": self.make_event_id(),
@@ -95,11 +109,15 @@ class ChatGPTImporter(BaseImporter):
                         "direction": direction,
                         "method": "import/chatgpt",
                         "content": content,
-                        "light_intent": light.get("intent"),
-                        "light_topic": light.get("topic"),
-                        "light_concepts": json.dumps(light.get("concepts", [])),
-                        "instinct_coherence": instinct.get("coherence_potential"),
-                        "instinct_gut_signal": instinct.get("gut_signal"),
+                        "light_intent": light_intent,
+                        "light_topic": light_topic,
+                        "light_concepts": light_concepts,
+                        "instinct_coherence": instinct_data.get(
+                            "coherence_potential"
+                        ),
+                        "instinct_gut_signal": instinct_data.get(
+                            "gut_signal"
+                        ),
                         "content_hash": c_hash,
                     })
                     self.imported += 1

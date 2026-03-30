@@ -65,8 +65,49 @@ class ClaudeCodeImporter(BaseImporter):
         finally:
             conn.close()
 
-    def _discover_sessions(self):
-        """Find all Claude Code session JSONL files."""
+    def run_incremental(self, since_ns: int):
+        """Import only sessions modified after since_ns (nanoseconds)."""
+        since_mtime = since_ns / 1e9  # Convert ns to seconds for file mtime
+        files = self._discover_sessions(since_mtime=since_mtime)
+
+        if not files:
+            click.echo("No new Claude Code sessions since last sync.")
+            return 0
+
+        conn = self.connect_db()
+        total_files = len(files)
+        click.echo(f"Found {total_files} modified Claude Code sessions")
+
+        try:
+            for idx, fpath in enumerate(files, 1):
+                project = self._extract_project(fpath)
+                session_id_raw = fpath.stem
+                count = self._import_session(conn, fpath, session_id_raw, project)
+                if count > 0:
+                    click.echo(
+                        f"  [{idx}/{total_files}] {project}: "
+                        f"{count} messages imported"
+                    )
+
+            conn.commit()
+            click.echo(
+                f"\nImported {self.imported} messages "
+                f"({self.skipped} duplicates skipped)"
+            )
+        except Exception as exc:
+            click.echo(f"Error: {exc}", err=True)
+        finally:
+            conn.close()
+
+        return self.imported
+
+    def _discover_sessions(self, since_mtime: float = None):
+        """Find all Claude Code session JSONL files.
+
+        Args:
+            since_mtime: If provided, only return files modified after this
+                         Unix timestamp (seconds). Used for incremental sync.
+        """
         base = Path.home() / ".claude" / "projects"
         if not base.exists():
             return []
@@ -78,6 +119,11 @@ class ClaudeCodeImporter(BaseImporter):
             Path(f) for f in files
             if "/subagents/" not in f
         ]
+
+        # Filter by modification time if doing incremental sync
+        if since_mtime is not None:
+            files = [f for f in files if f.stat().st_mtime > since_mtime]
+
         # Sort by modification time (newest first)
         files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
         return files

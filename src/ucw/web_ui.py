@@ -13,6 +13,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <style>
 :root {
   --bg: #ffffff;
+  --bg-surface: #f8f9fa;
   --bg-card: #f8f9fa;
   --bg-input: #ffffff;
   --text: #1a1a2e;
@@ -30,26 +31,37 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
   --graph-node: #2563eb;
   --graph-edge: #94a3b8;
   --moment-line: #2563eb;
+  --heatmap-0: #e5e7eb;
+  --heatmap-1: #dbeafe;
+  --heatmap-2: #93c5fd;
+  --heatmap-3: #3b82f6;
+  --heatmap-4: #1d4ed8;
 }
 
 [data-theme="dark"] {
-  --bg: #1a1a2e;
-  --bg-card: #16213e;
-  --bg-input: #0f3460;
+  --bg: #0f1117;
+  --bg-surface: #1a1d27;
+  --bg-card: #1a1d27;
+  --bg-input: #1a1d27;
   --text: #e2e8f0;
   --text-secondary: #94a3b8;
-  --accent: #60a5fa;
-  --accent-light: #1e3a5f;
-  --border: #334155;
+  --accent: #6366f1;
+  --accent-light: #1e1b4b;
+  --border: #2e3348;
   --shadow: 0 1px 3px rgba(0,0,0,0.3);
   --shadow-lg: 0 4px 6px rgba(0,0,0,0.4);
-  --bar-bg: #334155;
+  --bar-bg: #2e3348;
   --success: #34d399;
   --warning: #fbbf24;
   --danger: #f87171;
-  --graph-node: #60a5fa;
+  --graph-node: #6366f1;
   --graph-edge: #475569;
-  --moment-line: #60a5fa;
+  --moment-line: #6366f1;
+  --heatmap-0: #1a1d27;
+  --heatmap-1: #1e1b4b;
+  --heatmap-2: #4338ca;
+  --heatmap-3: #6366f1;
+  --heatmap-4: #818cf8;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -83,33 +95,6 @@ body {
 .health-dot.warn { background: var(--warning); }
 .health-dot.error { background: var(--danger); }
 
-/* Search */
-.search-container { position: relative; margin-bottom: 24px; }
-.search-input {
-  width: 100%; padding: 10px 16px; font-size: 1rem;
-  border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--bg-input); color: var(--text);
-  outline: none; transition: border-color 0.2s;
-}
-.search-input:focus { border-color: var(--accent); }
-.search-results {
-  position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
-  background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius); box-shadow: var(--shadow-lg);
-  max-height: 400px; overflow-y: auto; display: none;
-}
-.search-results.active { display: block; }
-.search-result-item {
-  padding: 10px 16px; border-bottom: 1px solid var(--border);
-  cursor: pointer; transition: background 0.15s;
-}
-.search-result-item:hover { background: var(--accent-light); }
-.search-result-item:last-child { border-bottom: none; }
-.search-result-topic { font-weight: 600; font-size: 0.875rem; }
-.search-result-summary { font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px; }
-.search-result-meta { font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; }
-.search-no-results { padding: 16px; text-align: center; color: var(--text-secondary); }
-
 /* Cards grid */
 .cards {
   display: grid;
@@ -133,13 +118,79 @@ body {
 }
 .section-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; }
 
-/* Platform bar chart */
+/* Bar chart */
 .bar-chart { display: flex; flex-direction: column; gap: 8px; }
-.bar-row { display: flex; align-items: center; gap: 12px; }
-.bar-label { width: 120px; font-size: 0.85rem; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-row { display: flex; align-items: center; gap: 12px; cursor: pointer; border-radius: 4px; padding: 2px 4px; transition: background 0.15s; }
+.bar-row:hover { background: var(--accent-light); }
+.bar-label { width: 140px; font-size: 0.85rem; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bar-track { flex: 1; height: 24px; background: var(--bar-bg); border-radius: 4px; overflow: hidden; position: relative; }
 .bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.5s ease; min-width: 2px; }
-.bar-value { width: 60px; font-size: 0.8rem; color: var(--text-secondary); }
+.bar-value { width: 80px; font-size: 0.8rem; color: var(--text-secondary); }
+.bar-pct { font-size: 0.75rem; color: var(--text-secondary); width: 40px; text-align: right; }
+
+/* Heatmap */
+.heatmap-container { overflow-x: auto; }
+.heatmap-grid {
+  display: grid;
+  grid-template-rows: repeat(7, 16px);
+  grid-auto-flow: column;
+  gap: 3px;
+}
+.heatmap-cell {
+  width: 16px; height: 16px; border-radius: 3px;
+  background: var(--heatmap-0);
+  transition: background 0.2s;
+}
+.heatmap-cell:hover { outline: 2px solid var(--accent); outline-offset: 1px; }
+.heatmap-cell[data-level="0"] { background: var(--heatmap-0); }
+.heatmap-cell[data-level="1"] { background: var(--heatmap-1); }
+.heatmap-cell[data-level="2"] { background: var(--heatmap-2); }
+.heatmap-cell[data-level="3"] { background: var(--heatmap-3); }
+.heatmap-cell[data-level="4"] { background: var(--heatmap-4); }
+.heatmap-legend { display: flex; gap: 4px; align-items: center; margin-top: 12px; font-size: 0.75rem; color: var(--text-secondary); }
+.heatmap-legend-cell { width: 12px; height: 12px; border-radius: 2px; }
+.heatmap-day-labels { display: grid; grid-template-rows: repeat(7, 16px); gap: 3px; margin-right: 6px; font-size: 0.65rem; color: var(--text-secondary); align-items: center; }
+.heatmap-wrapper { display: flex; align-items: start; }
+.heatmap-tooltip {
+  position: fixed; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 10px; font-size: 0.75rem;
+  box-shadow: var(--shadow-lg); pointer-events: none; z-index: 1000; display: none;
+}
+
+/* Search */
+.search-container { position: relative; margin-bottom: 24px; }
+.search-input {
+  width: 100%; padding: 10px 16px; font-size: 1rem;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--bg-input); color: var(--text);
+  outline: none; transition: border-color 0.2s;
+}
+.search-input:focus { border-color: var(--accent); }
+.search-hint { font-size: 0.75rem; color: var(--text-secondary); margin-top: 6px; }
+.search-hint code { background: var(--bg-surface); padding: 1px 6px; border-radius: 4px; font-family: monospace; }
+.search-results {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow-lg);
+  max-height: 400px; overflow-y: auto; display: none;
+}
+.search-results.active { display: block; }
+.search-result-item {
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.15s;
+}
+.search-result-item:hover { background: var(--accent-light); }
+.search-result-item:last-child { border-bottom: none; }
+.search-result-topic { font-weight: 600; font-size: 0.875rem; }
+.search-result-summary { font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px; }
+.search-result-meta { font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; }
+.search-no-results { padding: 16px; text-align: center; color: var(--text-secondary); }
+
+/* Topic trends canvas */
+.trends-canvas { width: 100%; height: 220px; border-radius: var(--radius); background: var(--bg); }
+.trends-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; font-size: 0.8rem; }
+.trends-legend-item { display: flex; align-items: center; gap: 6px; }
+.trends-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
 
 /* Timeline */
 .timeline { display: flex; flex-direction: column; gap: 0; }
@@ -153,27 +204,6 @@ body {
 .timeline-topic { font-weight: 600; font-size: 0.875rem; }
 .timeline-summary { font-size: 0.8rem; color: var(--text-secondary); }
 .timeline-meta { font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; }
-
-/* Topics */
-.topics-list { display: flex; flex-wrap: wrap; gap: 8px; }
-.topic-chip {
-  background: var(--accent-light); color: var(--accent); border-radius: 16px;
-  padding: 4px 12px; font-size: 0.8rem; font-weight: 500;
-}
-.topic-count { opacity: 0.7; margin-left: 4px; }
-
-/* Graph canvas */
-.graph-canvas { width: 100%; height: 400px; border-radius: var(--radius); background: var(--bg); }
-
-/* Moments */
-.moment-card {
-  padding: 12px; border-left: 3px solid var(--moment-line);
-  background: var(--bg); border-radius: 0 var(--radius) var(--radius) 0;
-  margin-bottom: 12px;
-}
-.moment-score { font-weight: 700; color: var(--accent); }
-.moment-desc { font-size: 0.875rem; margin-top: 4px; }
-.moment-meta { font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; }
 
 /* Capture health */
 .health-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -190,7 +220,7 @@ body {
 @media (max-width: 768px) {
   .two-col { grid-template-columns: 1fr; }
   .cards { grid-template-columns: repeat(2, 1fr); }
-  .bar-label { width: 80px; font-size: 0.75rem; }
+  .bar-label { width: 100px; font-size: 0.75rem; }
   .health-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 480px) {
@@ -210,13 +240,7 @@ body {
     </div>
   </div>
 
-  <!-- Search -->
-  <div class="search-container">
-    <input type="text" class="search-input" id="searchInput" placeholder="Search cognitive events..." autocomplete="off">
-    <div class="search-results" id="searchResults"></div>
-  </div>
-
-  <!-- Summary cards -->
+  <!-- 1. Summary cards -->
   <div class="cards" id="summaryCards">
     <div class="card"><div class="card-label">Total Events</div><div class="card-value" id="totalEvents">--</div></div>
     <div class="card"><div class="card-label">Sessions</div><div class="card-value" id="totalSessions">--</div></div>
@@ -224,37 +248,54 @@ body {
     <div class="card"><div class="card-label">Platforms</div><div class="card-value" id="platformCount">--</div></div>
   </div>
 
-  <!-- Two column: platforms + topics -->
-  <div class="two-col">
-    <div class="section">
-      <div class="section-title">Platform Breakdown</div>
-      <div class="bar-chart" id="platformChart"></div>
-    </div>
-    <div class="section">
-      <div class="section-title">Top Topics</div>
-      <div class="topics-list" id="topicsList"></div>
-    </div>
+  <!-- 2. Projects breakdown -->
+  <div class="section" id="projectsSection" style="display:none">
+    <div class="section-title">Projects Breakdown</div>
+    <div class="bar-chart" id="projectsChart"></div>
   </div>
 
-  <!-- Recent activity -->
+  <!-- 3. Activity heatmap -->
+  <div class="section" id="heatmapSection" style="display:none">
+    <div class="section-title">Activity (Last 30 Days)</div>
+    <div class="heatmap-container">
+      <div class="heatmap-wrapper">
+        <div class="heatmap-day-labels" id="heatmapDayLabels"></div>
+        <div class="heatmap-grid" id="heatmapGrid"></div>
+      </div>
+    </div>
+    <div class="heatmap-legend" id="heatmapLegend">
+      <span>Less</span>
+      <div class="heatmap-legend-cell" style="background:var(--heatmap-0)"></div>
+      <div class="heatmap-legend-cell" style="background:var(--heatmap-1)"></div>
+      <div class="heatmap-legend-cell" style="background:var(--heatmap-2)"></div>
+      <div class="heatmap-legend-cell" style="background:var(--heatmap-3)"></div>
+      <div class="heatmap-legend-cell" style="background:var(--heatmap-4)"></div>
+      <span>More</span>
+    </div>
+    <div class="heatmap-tooltip" id="heatmapTooltip"></div>
+  </div>
+
+  <!-- 4. Search -->
+  <div class="search-container">
+    <input type="text" class="search-input" id="searchInput" placeholder="Search cognitive events..." autocomplete="off">
+    <div class="search-hint">Try <code>project:friendlyface</code> or <code>project:ucw</code> to filter by project</div>
+    <div class="search-results" id="searchResults"></div>
+  </div>
+
+  <!-- 5. Topic trends -->
+  <div class="section" id="trendsSection" style="display:none">
+    <div class="section-title">Topic Trends (30 Days)</div>
+    <canvas class="trends-canvas" id="trendsCanvas"></canvas>
+    <div class="trends-legend" id="trendsLegend"></div>
+  </div>
+
+  <!-- 6. Recent activity -->
   <div class="section">
     <div class="section-title">Recent Activity</div>
     <div class="timeline" id="recentActivity"><div class="loading">Loading...</div></div>
   </div>
 
-  <!-- Knowledge graph -->
-  <div class="section" id="graphSection" style="display:none">
-    <div class="section-title">Knowledge Graph</div>
-    <canvas class="graph-canvas" id="graphCanvas"></canvas>
-  </div>
-
-  <!-- Coherence moments -->
-  <div class="section" id="momentsSection" style="display:none">
-    <div class="section-title">Coherence Moments</div>
-    <div id="momentsList"></div>
-  </div>
-
-  <!-- Capture health -->
+  <!-- 7. Capture health -->
   <div class="section">
     <div class="section-title">Capture Health</div>
     <div class="health-grid" id="captureHealth"><div class="loading">Loading...</div></div>
@@ -266,19 +307,19 @@ body {
   "use strict";
 
   // Theme
-  const html = document.documentElement;
-  const stored = localStorage.getItem("ucw-theme");
+  var html = document.documentElement;
+  var stored = localStorage.getItem("ucw-theme");
   if (stored) {
     html.setAttribute("data-theme", stored);
   } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
     html.setAttribute("data-theme", "dark");
   }
   document.getElementById("themeToggle").addEventListener("click", function() {
-    const current = html.getAttribute("data-theme");
-    const next = current === "dark" ? "light" : "dark";
+    var current = html.getAttribute("data-theme");
+    var next = current === "dark" ? "light" : "dark";
     html.setAttribute("data-theme", next);
     localStorage.setItem("ucw-theme", next);
-    if (_graphData) renderGraph(_graphData);
+    if (_topicsData) renderTrends(_topicsData);
   });
 
   // Utility
@@ -303,10 +344,6 @@ body {
     if (diff < 86400) return Math.floor(diff / 3600) + "h ago";
     return Math.floor(diff / 86400) + "d ago";
   }
-  function fmtTimestamp(ns) {
-    if (!ns) return "";
-    return new Date(ns / 1e6).toLocaleString();
-  }
 
   // Fetch helpers
   function api(path) {
@@ -326,28 +363,42 @@ body {
     var pkeys = Object.keys(platforms);
     document.getElementById("platformCount").textContent = fmt(pkeys.length);
 
-    // Platform chart
-    var chart = document.getElementById("platformChart");
-    chart.innerHTML = "";
-    var maxVal = 0;
-    pkeys.forEach(function(k) { if (platforms[k] > maxVal) maxVal = platforms[k]; });
-    pkeys.forEach(function(k) {
-      var pct = maxVal > 0 ? (platforms[k] / maxVal * 100) : 0;
-      chart.innerHTML +=
-        '<div class="bar-row">' +
-          '<div class="bar-label">' + k + '</div>' +
-          '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%"></div></div>' +
-          '<div class="bar-value">' + fmt(platforms[k]) + '</div>' +
-        '</div>';
-    });
+    // Update search placeholder with event count
+    var searchInput = document.getElementById("searchInput");
+    if (data.total_events) {
+      searchInput.placeholder = "Searching " + fmt(data.total_events) + " events...";
+    }
 
-    // Topics
-    var topics = data.top_topics || [];
-    var tlist = document.getElementById("topicsList");
-    tlist.innerHTML = "";
-    topics.forEach(function(t) {
-      tlist.innerHTML += '<span class="topic-chip">' + (t[0] || "unknown") + '<span class="topic-count">(' + t[1] + ')</span></span>';
-    });
+    // Projects breakdown
+    var projects = data.projects || [];
+    var projSection = document.getElementById("projectsSection");
+    var projChart = document.getElementById("projectsChart");
+    if (projects.length > 0) {
+      projSection.style.display = "";
+      projChart.innerHTML = "";
+      var maxCount = 0;
+      projects.forEach(function(p) { if (p.count > maxCount) maxCount = p.count; });
+      projects.forEach(function(p) {
+        var pct = maxCount > 0 ? (p.count / maxCount * 100) : 0;
+        var row = document.createElement("div");
+        row.className = "bar-row";
+        row.setAttribute("data-project", p.name);
+        row.innerHTML =
+          '<div class="bar-label">' + p.name + '</div>' +
+          '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%"></div></div>' +
+          '<div class="bar-value">' + fmt(p.count) + '</div>' +
+          '<div class="bar-pct">' + p.pct + '%</div>';
+        row.addEventListener("click", function() {
+          var input = document.getElementById("searchInput");
+          input.value = "project:" + p.name;
+          input.dispatchEvent(new Event("input"));
+          input.focus();
+        });
+        projChart.appendChild(row);
+      });
+    } else {
+      projSection.style.display = "none";
+    }
 
     // Capture health
     var ch = data.capture_health;
@@ -368,6 +419,220 @@ body {
     } else {
       healthEl.innerHTML = '<div>No health data</div>';
     }
+  }
+
+  // Render activity heatmap
+  function renderHeatmap(data) {
+    var section = document.getElementById("heatmapSection");
+    var grid = document.getElementById("heatmapGrid");
+    var dayLabels = document.getElementById("heatmapDayLabels");
+    var days = (data && data.days) ? data.days : [];
+
+    if (days.length === 0) {
+      section.style.display = "none";
+      return;
+    }
+    section.style.display = "";
+
+    // Build date->count map
+    var countMap = {};
+    var maxCount = 0;
+    days.forEach(function(d) {
+      countMap[d.date] = d.count;
+      if (d.count > maxCount) maxCount = d.count;
+    });
+
+    // Generate last 35 days (5 weeks) to fill grid
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var allDays = [];
+    // Start from the most recent Sunday that is >= 34 days ago
+    var startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - 34);
+    // Align to Sunday
+    var dayOfWeek = startDate.getDay();
+    startDate.setDate(startDate.getDate() - dayOfWeek);
+
+    var d = new Date(startDate);
+    while (d <= today) {
+      allDays.push(new Date(d));
+      d.setDate(d.getDate() + 1);
+    }
+
+    // Day labels
+    var dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    dayLabels.innerHTML = "";
+    for (var i = 0; i < 7; i++) {
+      var label = document.createElement("div");
+      label.textContent = (i % 2 === 1) ? dayNames[i] : "";
+      dayLabels.appendChild(label);
+    }
+
+    // Build grid cells
+    grid.innerHTML = "";
+    var tooltip = document.getElementById("heatmapTooltip");
+    allDays.forEach(function(date) {
+      var dateStr = date.toISOString().split("T")[0];
+      var count = countMap[dateStr] || 0;
+      var level = 0;
+      if (count > 0 && maxCount > 0) {
+        var ratio = count / maxCount;
+        if (ratio > 0.75) level = 4;
+        else if (ratio > 0.5) level = 3;
+        else if (ratio > 0.25) level = 2;
+        else level = 1;
+      }
+      var cell = document.createElement("div");
+      cell.className = "heatmap-cell";
+      cell.setAttribute("data-level", level);
+      cell.setAttribute("data-date", dateStr);
+      cell.setAttribute("data-count", count);
+      cell.addEventListener("mouseenter", function(e) {
+        tooltip.textContent = count + " events on " + dateStr;
+        tooltip.style.display = "block";
+        tooltip.style.left = (e.clientX + 10) + "px";
+        tooltip.style.top = (e.clientY - 30) + "px";
+      });
+      cell.addEventListener("mouseleave", function() {
+        tooltip.style.display = "none";
+      });
+      grid.appendChild(cell);
+    });
+  }
+
+  // Topic trends
+  var _topicsData = null;
+  var TREND_COLORS = ["#6366f1","#10b981","#f59e0b","#ef4444","#3b82f6","#ec4899","#8b5cf6","#14b8a6"];
+
+  function renderTrends(data) {
+    _topicsData = data;
+    var section = document.getElementById("trendsSection");
+    var topics = (data && data.topics) ? data.topics : {};
+    var topicNames = Object.keys(topics);
+
+    if (topicNames.length === 0) {
+      section.style.display = "none";
+      return;
+    }
+    section.style.display = "";
+
+    // Take top 5
+    topicNames = topicNames.slice(0, 5);
+
+    // Collect all dates and sort ascending
+    var dateSet = {};
+    topicNames.forEach(function(name) {
+      topics[name].forEach(function(d) { dateSet[d.date] = true; });
+    });
+    var dates = Object.keys(dateSet).sort();
+    if (dates.length < 2) {
+      section.style.display = "none";
+      return;
+    }
+
+    // Build series: for each topic, map date -> count
+    var series = topicNames.map(function(name) {
+      var map = {};
+      topics[name].forEach(function(d) { map[d.date] = d.count; });
+      return { name: name, values: dates.map(function(d) { return map[d] || 0; }) };
+    });
+
+    // Canvas setup
+    var canvas = document.getElementById("trendsCanvas");
+    var rect = canvas.getBoundingClientRect();
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    var ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+    var W = rect.width, H = rect.height;
+
+    var style = getComputedStyle(document.documentElement);
+    var bgColor = style.getPropertyValue("--bg").trim();
+    var textColor = style.getPropertyValue("--text-secondary").trim();
+
+    ctx.clearRect(0, 0, W, H);
+
+    var padLeft = 40, padRight = 16, padTop = 16, padBottom = 30;
+    var chartW = W - padLeft - padRight;
+    var chartH = H - padTop - padBottom;
+
+    // Stack the values
+    var stacked = [];
+    for (var di = 0; di < dates.length; di++) {
+      var cumulative = 0;
+      var col = [];
+      for (var si = 0; si < series.length; si++) {
+        var val = series[si].values[di];
+        col.push({ y0: cumulative, y1: cumulative + val });
+        cumulative += val;
+      }
+      stacked.push({ total: cumulative, layers: col });
+    }
+
+    var maxY = 0;
+    stacked.forEach(function(s) { if (s.total > maxY) maxY = s.total; });
+    if (maxY === 0) maxY = 1;
+
+    function xPos(i) { return padLeft + (i / (dates.length - 1)) * chartW; }
+    function yPos(v) { return padTop + chartH - (v / maxY) * chartH; }
+
+    // Draw stacked areas (bottom to top)
+    for (var si = series.length - 1; si >= 0; si--) {
+      ctx.beginPath();
+      ctx.moveTo(xPos(0), yPos(stacked[0].layers[si].y0));
+      for (var di = 0; di < dates.length; di++) {
+        ctx.lineTo(xPos(di), yPos(stacked[di].layers[si].y1));
+      }
+      for (var di = dates.length - 1; di >= 0; di--) {
+        ctx.lineTo(xPos(di), yPos(stacked[di].layers[si].y0));
+      }
+      ctx.closePath();
+      ctx.fillStyle = TREND_COLORS[si % TREND_COLORS.length] + "80";
+      ctx.fill();
+      ctx.strokeStyle = TREND_COLORS[si % TREND_COLORS.length];
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (var di = 0; di < dates.length; di++) {
+        if (di === 0) ctx.moveTo(xPos(di), yPos(stacked[di].layers[si].y1));
+        else ctx.lineTo(xPos(di), yPos(stacked[di].layers[si].y1));
+      }
+      ctx.stroke();
+    }
+
+    // Y axis labels
+    ctx.fillStyle = textColor;
+    ctx.font = "10px -apple-system, sans-serif";
+    ctx.textAlign = "right";
+    for (var i = 0; i <= 4; i++) {
+      var yVal = Math.round(maxY * i / 4);
+      var y = yPos(yVal);
+      ctx.fillText(yVal, padLeft - 6, y + 3);
+      ctx.strokeStyle = textColor + "30";
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(padLeft, y);
+      ctx.lineTo(W - padRight, y);
+      ctx.stroke();
+    }
+
+    // X axis labels (show ~5 dates)
+    ctx.textAlign = "center";
+    var step = Math.max(1, Math.floor(dates.length / 5));
+    for (var i = 0; i < dates.length; i += step) {
+      var parts = dates[i].split("-");
+      ctx.fillText(parts[1] + "/" + parts[2], xPos(i), H - 8);
+    }
+
+    // Legend
+    var legend = document.getElementById("trendsLegend");
+    legend.innerHTML = "";
+    topicNames.forEach(function(name, idx) {
+      legend.innerHTML +=
+        '<div class="trends-legend-item">' +
+        '<div class="trends-legend-dot" style="background:' + TREND_COLORS[idx % TREND_COLORS.length] + '"></div>' +
+        '<span>' + name + '</span></div>';
+    });
   }
 
   // Render recent events
@@ -392,136 +657,34 @@ body {
     });
   }
 
-  // Graph
-  var _graphData = null;
-  function renderGraph(data) {
-    _graphData = data;
-    var section = document.getElementById("graphSection");
-    if (!data || !data.nodes || data.nodes.length === 0) {
-      section.style.display = "none";
-      return;
-    }
-    section.style.display = "";
-
-    var canvas = document.getElementById("graphCanvas");
-    var ctx = canvas.getContext("2d");
-    var rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * (window.devicePixelRatio || 1);
-    canvas.height = rect.height * (window.devicePixelRatio || 1);
-    ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
-    var W = rect.width, H = rect.height;
-
-    var style = getComputedStyle(document.documentElement);
-    var nodeColor = style.getPropertyValue("--graph-node").trim() || "#2563eb";
-    var edgeColor = style.getPropertyValue("--graph-edge").trim() || "#94a3b8";
-    var textColor = style.getPropertyValue("--text").trim() || "#1a1a2e";
-
-    // Position nodes in a force-directed-ish layout (simple spring simulation)
-    var nodes = data.nodes.map(function(n, i) {
-      var angle = (2 * Math.PI * i) / data.nodes.length;
-      var r = Math.min(W, H) * 0.35;
-      return { id: n.id, label: n.label, type: n.type, count: n.count || 1,
-               x: W/2 + r * Math.cos(angle) + (Math.random() - 0.5) * 30,
-               y: H/2 + r * Math.sin(angle) + (Math.random() - 0.5) * 30,
-               vx: 0, vy: 0 };
-    });
-    var nodeMap = {};
-    nodes.forEach(function(n) { nodeMap[n.id] = n; });
-
-    var edges = (data.edges || []).filter(function(e) {
-      return nodeMap[e.source] && nodeMap[e.target];
-    });
-
-    // Simple force simulation (50 iterations)
-    for (var iter = 0; iter < 50; iter++) {
-      // Repulsion
-      for (var i = 0; i < nodes.length; i++) {
-        for (var j = i + 1; j < nodes.length; j++) {
-          var dx = nodes[j].x - nodes[i].x;
-          var dy = nodes[j].y - nodes[i].y;
-          var dist = Math.sqrt(dx*dx + dy*dy) || 1;
-          var force = 5000 / (dist * dist);
-          var fx = (dx / dist) * force;
-          var fy = (dy / dist) * force;
-          nodes[i].vx -= fx; nodes[i].vy -= fy;
-          nodes[j].vx += fx; nodes[j].vy += fy;
-        }
-      }
-      // Attraction along edges
-      edges.forEach(function(e) {
-        var a = nodeMap[e.source], b = nodeMap[e.target];
-        if (!a || !b) return;
-        var dx = b.x - a.x, dy = b.y - a.y;
-        var dist = Math.sqrt(dx*dx + dy*dy) || 1;
-        var force = (dist - 100) * 0.01;
-        var fx = (dx / dist) * force;
-        var fy = (dy / dist) * force;
-        a.vx += fx; a.vy += fy;
-        b.vx -= fx; b.vy -= fy;
-      });
-      // Center gravity
-      nodes.forEach(function(n) {
-        n.vx += (W/2 - n.x) * 0.001;
-        n.vy += (H/2 - n.y) * 0.001;
-        n.x += n.vx * 0.5;
-        n.y += n.vy * 0.5;
-        n.vx *= 0.8; n.vy *= 0.8;
-        n.x = Math.max(30, Math.min(W - 30, n.x));
-        n.y = Math.max(30, Math.min(H - 30, n.y));
-      });
-    }
-
-    // Draw
-    ctx.clearRect(0, 0, W, H);
-    // Edges
-    ctx.strokeStyle = edgeColor;
-    ctx.lineWidth = 1;
-    edges.forEach(function(e) {
-      var a = nodeMap[e.source], b = nodeMap[e.target];
-      if (!a || !b) return;
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
-      ctx.stroke();
-    });
-    // Nodes
-    nodes.forEach(function(n) {
-      var r = Math.max(5, Math.min(20, 3 + Math.sqrt(n.count) * 2));
-      ctx.beginPath();
-      ctx.arc(n.x, n.y, r, 0, 2 * Math.PI);
-      ctx.fillStyle = nodeColor;
-      ctx.fill();
-      ctx.fillStyle = textColor;
-      ctx.font = "11px -apple-system, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(n.label, n.x, n.y + r + 14);
-    });
-  }
-
-  // Moments
-  function renderMoments(data) {
-    var section = document.getElementById("momentsSection");
-    if (!data || !Array.isArray(data) || data.length === 0) {
-      section.style.display = "none";
-      return;
-    }
-    section.style.display = "";
-    var el = document.getElementById("momentsList");
-    el.innerHTML = "";
-    data.forEach(function(m) {
-      el.innerHTML +=
-        '<div class="moment-card">' +
-          '<span class="moment-score">' + (m.coherence_score != null ? m.coherence_score.toFixed(2) : "--") + '</span>' +
-          '<div class="moment-desc">' + (m.description || "Coherence detected") + '</div>' +
-          '<div class="moment-meta">' + (m.platforms || []).join(", ") + ' &middot; ' + fmtAge(m.timestamp) + '</div>' +
-        '</div>';
-    });
-  }
-
   // Search with debounce
   var searchTimer = null;
   var searchInput = document.getElementById("searchInput");
   var searchResults = document.getElementById("searchResults");
+
+  function doSearch(q) {
+    // Handle project: filter syntax
+    var searchQ = q;
+    var match = q.match(/^project:(\S+)$/);
+    if (match) {
+      searchQ = match[1];
+    }
+    api("/api/search?q=" + encodeURIComponent(searchQ) + "&limit=10").then(function(data) {
+      var results = data.results || [];
+      if (results.length === 0) {
+        searchResults.innerHTML = '<div class="search-no-results">No results for "' + q + '"</div>';
+      } else {
+        searchResults.innerHTML = results.map(function(r) {
+          return '<div class="search-result-item">' +
+            '<div class="search-result-topic">' + (r.topic || r.event_id || "event") + '</div>' +
+            '<div class="search-result-summary">' + (r.summary || r.snippet || "") + '</div>' +
+            '<div class="search-result-meta">' + (r.platform || "") + ' &middot; ' + fmtAge(r.timestamp_ns) + '</div>' +
+          '</div>';
+        }).join("");
+      }
+      searchResults.classList.add("active");
+    });
+  }
 
   searchInput.addEventListener("input", function() {
     clearTimeout(searchTimer);
@@ -531,50 +694,18 @@ body {
       searchResults.innerHTML = "";
       return;
     }
-    searchTimer = setTimeout(function() {
-      api("/api/search?q=" + encodeURIComponent(q) + "&limit=10").then(function(data) {
-        var results = data.results || [];
-        if (results.length === 0) {
-          searchResults.innerHTML = '<div class="search-no-results">No results for "' + q + '"</div>';
-        } else {
-          searchResults.innerHTML = results.map(function(r) {
-            return '<div class="search-result-item">' +
-              '<div class="search-result-topic">' + (r.topic || r.event_id || "event") + '</div>' +
-              '<div class="search-result-summary">' + (r.summary || r.snippet || "") + '</div>' +
-              '<div class="search-result-meta">' + (r.platform || "") + ' &middot; ' + fmtAge(r.timestamp_ns) + '</div>' +
-            '</div>';
-          }).join("");
-        }
-        searchResults.classList.add("active");
-      });
-    }, 300);
+    searchTimer = setTimeout(function() { doSearch(q); }, 300);
   });
 
-  // Instant search on Enter
   searchInput.addEventListener("keydown", function(e) {
     if (e.key === "Enter") {
       clearTimeout(searchTimer);
       var q = searchInput.value.trim();
       if (!q) return;
-      api("/api/search?q=" + encodeURIComponent(q) + "&limit=10").then(function(data) {
-        var results = data.results || [];
-        if (results.length === 0) {
-          searchResults.innerHTML = '<div class="search-no-results">No results for "' + q + '"</div>';
-        } else {
-          searchResults.innerHTML = results.map(function(r) {
-            return '<div class="search-result-item">' +
-              '<div class="search-result-topic">' + (r.topic || r.event_id || "event") + '</div>' +
-              '<div class="search-result-summary">' + (r.summary || r.snippet || "") + '</div>' +
-              '<div class="search-result-meta">' + (r.platform || "") + ' &middot; ' + fmtAge(r.timestamp_ns) + '</div>' +
-            '</div>';
-          }).join("");
-        }
-        searchResults.classList.add("active");
-      });
+      doSearch(q);
     }
   });
 
-  // Close search on click outside
   document.addEventListener("click", function(e) {
     if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
       searchResults.classList.remove("active");
@@ -585,8 +716,8 @@ body {
   function loadAll() {
     api("/api/dashboard").then(renderDashboard).catch(function() {});
     api("/api/events?limit=10").then(renderEvents).catch(function() {});
-    api("/api/graph?limit=50").then(renderGraph).catch(function() {});
-    api("/api/moments?limit=20").then(renderMoments).catch(function() {});
+    api("/api/activity?days=30").then(renderHeatmap).catch(function() {});
+    api("/api/topics?days=30").then(renderTrends).catch(function() {});
   }
 
   loadAll();

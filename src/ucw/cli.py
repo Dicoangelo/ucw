@@ -26,7 +26,8 @@ def main():
 
 
 @main.command()
-def init():
+@click.option("--skip-import", is_flag=True, help="Skip auto-import of detected sessions")
+def init(skip_import):
     """Initialize UCW: create ~/.ucw/, detect AI tools, print setup instructions."""
     from pathlib import Path as _Path
 
@@ -88,6 +89,35 @@ def init():
         click.echo("Detected AI tools:")
         for tool in detected:
             click.echo(f"  {tool}")
+
+    # --- Auto-import Claude Code sessions ---
+    claude_projects = home / ".claude" / "projects"
+    if not skip_import and claude_projects.exists():
+        import glob as _glob
+
+        pattern = str(claude_projects / "*" / "*.jsonl")
+        session_files = [
+            f for f in _glob.glob(pattern) if "/subagents/" not in f
+        ]
+        session_count = len(session_files)
+
+        if session_count > 0:
+            try:
+                confirm = click.confirm(
+                    f"\nFound {session_count} Claude Code sessions. Import now?",
+                    default=True,
+                )
+            except (click.exceptions.Abort, EOFError):
+                confirm = False
+            if confirm:
+                from ucw.importers.claude_code import ClaudeCodeImporter
+
+                try:
+                    importer = ClaudeCodeImporter()
+                    importer.run()
+                except Exception as exc:
+                    click.echo(f"  Import failed: {exc}", err=True)
+                    click.echo("  Run `ucw import claude-code` later.")
 
     # --- MCP config snippet ---
     ucw_path = _find_ucw_executable()
@@ -534,10 +564,62 @@ def import_cmd():
 
 
 @import_cmd.command()
-@click.argument("filepath", type=click.Path(exists=True))
+@click.argument("filepath", type=click.Path(exists=True), required=False)
 def chatgpt(filepath):
-    """Import ChatGPT conversations from export JSON."""
+    """Import ChatGPT conversations from export JSON or ZIP."""
+    import glob as _glob
+    import zipfile as _zipfile
+    from pathlib import Path as _Path
+
     from ucw.importers.chatgpt import ChatGPTImporter
+
+    if filepath is None:
+        # Auto-detect common export locations
+        candidates = _glob.glob(
+            str(_Path.home() / "Downloads" / "conversations.json")
+        ) + _glob.glob(
+            str(_Path.home() / "Downloads" / "*.zip")
+        )
+        # Filter ZIPs that likely contain ChatGPT exports
+        json_candidates = [c for c in candidates if c.endswith(".json")]
+        zip_candidates = [
+            c for c in candidates
+            if c.endswith(".zip") and _zipfile.is_zipfile(c)
+            and any("conversations.json" in n for n in _zipfile.ZipFile(c).namelist())
+        ]
+
+        if json_candidates:
+            filepath = json_candidates[0]
+            click.echo(f"Found: {filepath}")
+        elif zip_candidates:
+            filepath = zip_candidates[0]
+            click.echo(f"Found ZIP: {filepath}")
+        else:
+            click.echo("No ChatGPT export found. To export your data:")
+            click.echo()
+            click.echo("  1. Go to https://chatgpt.com")
+            click.echo("  2. Settings > Data Controls > Export data")
+            click.echo("  3. Click 'Export' and wait for the email")
+            click.echo("  4. Download the ZIP to ~/Downloads/")
+            click.echo("  5. Run: ucw import chatgpt ~/Downloads/conversations.json")
+            click.echo("     or:  ucw import chatgpt ~/Downloads/export.zip")
+            return
+
+    path = _Path(filepath)
+
+    # Handle ZIP files
+    if path.suffix == ".zip":
+        import tempfile as _tempfile
+
+        click.echo("Extracting conversations.json from ZIP...")
+        with _zipfile.ZipFile(str(path)) as zf:
+            names = [n for n in zf.namelist() if n.endswith("conversations.json")]
+            if not names:
+                click.echo("Error: ZIP does not contain conversations.json")
+                return
+            tmp = _Path(_tempfile.mkdtemp())
+            zf.extract(names[0], str(tmp))
+            filepath = str(tmp / names[0])
 
     importer = ChatGPTImporter()
     importer.run(filepath)
@@ -1014,6 +1096,85 @@ def enrich(status, force):
     for t, c in topics:
         click.echo(f"  {t}: {c:,}")
     conn2.close()
+
+
+@main.command()
+@click.option("--source", default=None, help="Sync specific source (claude-code)")
+def sync(source):
+    """Import new conversations from all detected sources."""
+    import time as _time
+    from pathlib import Path as _Path
+
+    sync_state_path = Config.UCW_DIR / "sync_state.json"
+
+    # Load existing sync state
+    if sync_state_path.exists():
+        try:
+            sync_state = json.loads(sync_state_path.read_text())
+        except (json.JSONDecodeError, OSError):
+            sync_state = {}
+    else:
+        sync_state = {}
+
+    # Detect available sources
+    sources = []
+    claude_projects = _Path.home() / ".claude" / "projects"
+    if claude_projects.exists():
+        sources.append("claude-code")
+
+    if source:
+        if source not in sources:
+            click.echo(f"Source '{source}' not detected.")
+            return
+        sources = [source]
+
+    if not sources:
+        click.echo("No sources detected.")
+        click.echo("  Claude Code: ~/.claude/projects/ not found")
+        return
+
+    now_ns = _time.time_ns()
+
+    for src in sources:
+        if src == "claude-code":
+            from ucw.importers.claude_code import ClaudeCodeImporter
+
+            state = sync_state.get("claude-code", {})
+            last_sync_ns = state.get("last_sync_ns", 0)
+
+            # Format last sync time for display
+            if last_sync_ns > 0:
+                elapsed_s = (now_ns - last_sync_ns) / 1e9
+                if elapsed_s < 3600:
+                    ago = f"{int(elapsed_s / 60)}m ago"
+                elif elapsed_s < 86400:
+                    ago = f"{int(elapsed_s / 3600)}h ago"
+                else:
+                    ago = f"{int(elapsed_s / 86400)}d ago"
+            else:
+                ago = "never"
+
+            importer = ClaudeCodeImporter()
+            if last_sync_ns > 0:
+                imported = importer.run_incremental(last_sync_ns)
+            else:
+                importer.run()
+                imported = importer.imported
+
+            prev_total = state.get("events_imported", 0)
+            sync_state["claude-code"] = {
+                "last_sync_ns": now_ns,
+                "events_imported": prev_total + imported,
+            }
+
+            click.echo(
+                f"Synced {imported} new messages from claude-code "
+                f"(last sync: {ago})"
+            )
+
+    # Persist sync state
+    Config.UCW_DIR.mkdir(parents=True, exist_ok=True)
+    sync_state_path.write_text(json.dumps(sync_state, indent=2) + "\n")
 
 
 @main.command()

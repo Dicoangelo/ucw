@@ -259,3 +259,33 @@ class TestExportCLI:
         result = runner.invoke(main, ["export"])
         assert result.exit_code == 0
         assert "No events to export." in result.output
+
+
+# -- Sync CLI Tests ──────────────────────────────────
+
+
+class TestSyncCLI:
+    def test_sync_no_sources(self, runner, tmp_ucw_dir, tmp_path):
+        """No ~/.claude/projects -> 'No sources detected'."""
+        from unittest.mock import patch
+
+        fake_home = tmp_path / "fakehome"
+        fake_home.mkdir()
+        with patch("pathlib.Path.home", return_value=fake_home):
+            result = runner.invoke(main, ["sync"])
+        assert result.exit_code == 0
+        assert "No sources detected" in result.output
+
+    def test_sync_help(self, runner):
+        """Verify sync help text."""
+        result = runner.invoke(main, ["sync", "--help"])
+        assert result.exit_code == 0
+        assert "--source" in result.output
+        assert "Import new conversations" in result.output
+
+    def test_init_skip_import(self, runner, tmp_ucw_dir):
+        """--skip-import flag skips the auto-import prompt."""
+        result = runner.invoke(main, ["init", "--skip-import"])
+        assert result.exit_code == 0
+        # Should not prompt for import
+        assert "Import now?" not in result.output

@@ -91,6 +91,36 @@ def get_dashboard_data(db_path=None):
         ).fetchall()
         data['gut_signals'] = [(r[0], r[1]) for r in rows]
 
+        # Projects breakdown — topics that look like project names (not generic)
+        _generic = {
+            'frontend', 'backend', 'auth', 'deployment', 'testing',
+            'infrastructure', 'api', 'database', 'ui', 'ux', 'devops',
+            'security', 'performance', 'debugging', 'refactoring',
+            'documentation', 'configuration', 'monitoring', 'ci-cd',
+            'migration', 'review', 'planning', 'design', 'general',
+        }
+        project_rows = conn.execute(
+            "SELECT light_topic, COUNT(*) as c, MAX(timestamp_ns) as last_ns "
+            "FROM cognitive_events "
+            "WHERE light_topic IS NOT NULL" + _nf + " "
+            "GROUP BY light_topic ORDER BY c DESC LIMIT 30"
+        ).fetchall()
+        total_for_pct = data['total_events'] or 1
+        projects = []
+        for row in project_rows:
+            name = row[0]
+            if name.lower() in _generic:
+                continue
+            projects.append({
+                'name': name,
+                'count': row[1],
+                'last_active_ns': row[2],
+                'pct': round(row[1] / total_for_pct * 100, 1),
+            })
+            if len(projects) >= 10:
+                break
+        data['projects'] = projects
+
         # Capture health
         import time as _time
         now_ns = _time.time_ns()
